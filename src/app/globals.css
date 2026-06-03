@@ -1,0 +1,154 @@
+:root {
+  color: #172019;
+  background: #f6f3ec;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 220px;
+  gap: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: #fffdf8;
+  border: 1px solid #ded8ca;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.panel h1,
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.panel p {
+  margin: 0 0 16px;
+  color: #586152;
+  line-height: 1.5;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  color: #374034;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid #cfc7b8;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: white;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 38px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #2f6b3f;
+  color: white;
+}
+
+.secondary-button {
+  background: white;
+  border-color: #cfc7b8;
+  color: #263026;
+}
+
+.canvas-panel {
+  min-height: 640px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.yard-canvas {
+  display: block;
+  width: 100%;
+  height: 640px;
+  background:
+    linear-gradient(90deg, rgba(47, 107, 63, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(47, 107, 63, 0.08) 1px, transparent 1px),
+    #e9dfcb;
+  background-size: 32px 32px;
+}
+
+.legend-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 10px;
+  color: #384037;
+  font-size: 14px;
+}
+
+.swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+@media (max-width: 980px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-panel {
+    min-height: 520px;
+  }
+
+  .yard-canvas {
+    height: 520px;
+  }
+}
