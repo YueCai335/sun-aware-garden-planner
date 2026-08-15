@@ -85,22 +85,33 @@ MVP approximation:
 
 Later improvements:
 
-- User calibrates tree shadow from photos.
+- User calibrates important yard points with guided sky panoramas.
 - Vision model segments tree canopy.
 - LiDAR or DSM data estimates tree height.
 
 ## Photo Calibration
 
-Photos can help validate and adjust the model.
+Photos can help validate and adjust the model, but they do not replace the
+yard geometry model.
 
 Workflow:
 
-1. User takes photos at known times on a sunny day.
-2. User marks real shadow boundaries.
-3. App compares simulated shadow boundaries with observed boundaries.
-4. App suggests adjustments to obstacle height or shape.
+1. User selects a measurement point on the yard map.
+2. User captures a guided sky panorama from that point.
+3. The app records location and camera orientation.
+4. A vision model creates a sky-versus-obstacle mask.
+5. User corrects segmentation mistakes when necessary.
+6. The app projects calculated solar positions onto the mask at regular time
+   intervals.
+7. Unobstructed intervals are summed into estimated direct-sun hours.
+8. The point result is compared with the yard-wide simulation.
+9. The app suggests adjustments to nearby obstacle height or shape.
+
+Photos taken at known times can provide additional validation by showing real
+shadow boundaries, but they are optional and do not provide enough geometry on
+their own.
 
 Important limitation:
 
-Do not rely on photos alone to infer a full 3D model in MVP. Use photos to calibrate a user-marked model.
-
+Do not rely on photos alone to infer a full 3D model. Use panoramic observations
+to calibrate a user-marked model after the deterministic MVP works.

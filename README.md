@@ -19,7 +19,7 @@ Input:
 
 - Address or coordinates.
 - Aerial yard image, such as a Google Maps or Apple Maps screenshot.
-- Optional yard photos taken at requested times, such as 9 AM, 12 PM, and 3 PM.
+- Optional guided sky panoramas from important yard locations for later calibration.
 - User-marked yard boundary, house, trees, beds, fence, and other obstacles.
 - Approximate obstacle heights.
 
@@ -76,6 +76,8 @@ This is not a basic gardening tracker or CRUD app. It combines:
 - [Product Brief](docs/product-brief.md)
 - [MVP Roadmap](docs/mvp-roadmap.md)
 - [Technical Architecture](docs/technical-architecture.md)
+- [Project Strategy](docs/project-strategy.md)
+- [Architecture Decision Records](docs/decisions/README.md)
 - [Sun And Shadow Algorithm](docs/sun-shadow-algorithm.md)
 - [AI And RAG Design](docs/ai-rag-agent-design.md)
 - [Resume Positioning](docs/resume-positioning.md)

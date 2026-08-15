@@ -47,8 +47,10 @@ Frontend:
 
 Backend:
 
-- FastAPI with Python, or Node.js with TypeScript.
-- Python may be better for geometry and solar calculations.
+- FastAPI with Python.
+- Pydantic for API validation and pytest for backend tests.
+- See [ADR-0002](decisions/0002-use-fastapi-python-backend.md) for the
+  decision and rejected alternatives.
 
 Data:
 
@@ -90,3 +92,10 @@ AWS extensions for later:
 - Lambda for async analysis jobs.
 - ECS/Fargate for backend.
 
+## Architecture Decisions
+
+Decisions that affect architecture, product correctness, cost, security, or
+long-term maintainability are recorded in
+[Architecture Decision Records](decisions/README.md). Each record includes the
+selected approach, rejected alternatives, consequences, and conditions for
+reconsideration.

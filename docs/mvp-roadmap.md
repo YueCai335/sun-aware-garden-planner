@@ -54,20 +54,29 @@ Success criteria:
 - Agent output is structured and inspectable.
 - User can revise constraints, such as "low maintenance" or "more edible plants".
 
-## Phase 4: Photo Calibration
+## Phase 4: Panoramic Photo Calibration
 
-Goal: use real yard photos to calibrate simulated shadows.
+Goal: use point-based sky observations to calibrate the yard-wide simulation.
 
 Features:
 
-- Ask user to take photos at 9 AM, 12 PM, 3 PM, and optionally 5 PM on a sunny day.
-- User marks observed shadow boundaries.
-- System compares simulated shadows with observed shadows.
-- App suggests adjusting obstacle height or shape.
+- User selects important measurement points on the yard map.
+- At each point, the app guides the user through a sky panorama capture.
+- Capture location, direction, and camera orientation metadata.
+- Segment the panorama into sky and obstacles, with manual correction.
+- Project the calculated solar path onto the sky mask.
+- Estimate direct-sun hours for the selected date or month.
+- Compare point estimates with the yard-wide heatmap.
+- Suggest adjustments to nearby obstacle height or shape when results differ.
+- Allow time-specific yard photos as optional validation evidence.
 
 Success criteria:
 
-- Simulated shadow map becomes closer to real observed shadow boundaries.
+- Point estimates are explainable and reproducible.
+- Calibration improves agreement between observed obstructions and the
+  simulated heatmap.
+- The feature does not infer a complete 3D yard from two or three ordinary
+  photos.
 
 ## Phase 5: Advanced Automation
 
@@ -78,4 +87,3 @@ Possible later features:
 - Weather-aware watering and frost alerts.
 - Year-to-year crop rotation memory.
 - Optional cloud deployment on AWS if needed for resume or scale.
-
