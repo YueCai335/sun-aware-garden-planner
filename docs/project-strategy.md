@@ -239,8 +239,11 @@ Goal: a recruiter can open the app and complete one realistic workflow.
 Required:
 
 - Select or upload a yard image.
-- Draw and edit yard, house, tree, fence, and planting bed shapes.
-- Enter location, date, and obstacle heights.
+- Create a yard coordinate system by entering its width and depth in metres and
+  setting its north bearing.
+- Draw and edit yard, house, tree, fence, and planting bed shapes with direct
+  movement, resize handles, visible measurements, and precise numeric fields.
+- Enter location, date, and obstacle heights in metres.
 - Generate a simplified sun-hours heatmap.
 - Include one built-in demo project.
 - Store local state in the browser.
@@ -258,9 +261,12 @@ is introduced.
 The phase is ready for review when a new user can complete this scenario in the
 deployed demo:
 
-1. Open the built-in demo yard or upload a yard image.
-2. Draw a yard boundary, a house, a tree, a fence, and a planting bed.
-3. Select an object, change its height or geometry, and delete it.
+1. Open the built-in demo yard or upload a yard image and see its dimensions
+   and north orientation.
+2. Draw a yard boundary, a house, a tree, a fence, and a planting bed using
+   metre-based dimensions.
+3. Select an object, move or resize it directly, change its height or geometry,
+   and delete it.
 4. Enter a location and date, then run the sun analysis.
 5. See a sun-hours heatmap that changes after a meaningful obstacle or date
    change.
@@ -271,7 +277,8 @@ Phase 1 verification requires:
 
 - Unit tests for solar-position, shadow-projection, and sun-hours accumulation
   functions.
-- Interaction coverage for drawing, editing, deleting, saving, and clearing.
+- Interaction coverage for drawing, moving, resizing, deleting, measuring,
+  saving, and clearing.
 - A browser-level test for the acceptance scenario.
 - A production build and TypeScript check.
 - README instructions, screenshots, known limitations, and expected accuracy
