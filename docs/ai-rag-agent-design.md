@@ -2,7 +2,9 @@
 
 ## Principle
 
-The app should not use AI to guess the physics. Solar position and shadow projection should be deterministic. AI should help with interpretation, planning, retrieval, and user interaction.
+AI assists with language understanding, retrieval, and explanation. Garden
+records, authorization, validation, date calculations, and crop-rotation rules
+remain deterministic. Users review AI-generated record drafts before saving.
 
 ## RAG Knowledge Base
 
@@ -10,86 +12,88 @@ Possible documents and structured data:
 
 - Local extension planting guides.
 - Vegetable spacing charts.
-- Plant sun requirements.
-- Hardiness zone data.
-- Frost dates and growing season notes.
-- Companion planting and rotation guidelines.
+- Plant water, fertilizer, and care guidance.
+- Hardiness-zone, frost-date, and growing-season references.
+- Crop-family and rotation guidance.
 - Disease and pest reference notes.
 
 Plant fields:
 
-- Common name.
-- Scientific name.
-- Sun requirement.
-- Height.
-- Spacing.
-- Water needs.
-- Hardiness zone.
-- Days to maturity.
-- Suitable season.
-- Disease notes.
+- Common name and scientific name.
+- Crop family.
+- Spacing, maturity, hardiness, and growing season.
+- Water, fertilizer, disease, and pest notes.
+- Source URL, publisher, date, and retrieval metadata.
 
-## RAG Query Examples
+## AI Workflows
 
-- "What can I plant in a 4-6 hour sun zone in Quebec in June?"
-- "Can basil grow in part sun?"
-- "What vegetables tolerate morning sun and afternoon shade?"
-- "What should I avoid planting after tomatoes?"
+### Garden Note Extraction
 
-## Agent Workflow
+The user writes a note such as:
 
-Planning flow:
+> Fertilized the two cherry tomatoes in the north raised bed with fish emulsion today.
 
-1. Sun Analysis Agent reads heatmap summary.
-2. Plant Matching Agent filters plants by sun, climate, height, and user goals.
-3. Layout Agent places plants while respecting spacing and shade constraints.
-4. Explanation Agent creates beginner-friendly reasoning with citations.
-5. Task Agent creates planting and care tasks.
+The assistant returns a reviewable draft containing the growing area, affected
+plants, event type, fertilizer, date, and any missing fields. The user corrects
+or confirms the draft before persistence.
+
+### Grounded Garden Questions
+
+Example questions:
+
+- "What should I plant after tomatoes in this raised bed next year?"
+- "Which care tasks are due for my basil this week?"
+- "Can I use this fertilizer on the plants in my container area?"
+
+The assistant receives the user's garden facts, retrieves relevant horticultural
+sources, applies deterministic constraints, and returns an explanation with
+citations and uncertainty where needed.
+
+### Planning Assistance
+
+The assistant can prepare a user-editable plan that includes suggested plants,
+rotation warnings, task dates, assumptions, and citations. Explicit constraints
+such as a growing area, season, available space, and edible-or-ornamental goal
+remain visible in the output.
 
 ## Structured Outputs
 
 Use structured JSON outputs for:
 
-- Zone summaries.
-- Plant recommendation lists.
-- Layout suggestions.
-- Monthly tasks.
-- Journal entries.
+- Garden-event drafts.
+- Missing-field questions.
+- Plant and care recommendations.
+- Rotation-warning explanations.
+- Task suggestions.
+- Source citations and confidence notes.
 
-Example zone recommendation:
+Example garden-event draft:
 
 ```json
 {
-  "zone_id": "backyard_zone_3",
-  "sun_hours": 5.2,
-  "category": "part_sun",
-  "recommended_plants": ["basil", "lettuce", "cilantro", "hydrangea"],
-  "avoid": ["tomato", "cucumber"],
-  "reason": "This area receives around 5 hours of direct sun and is better for herbs, leafy greens, and part-sun ornamentals."
+  "event_type": "fertilized",
+  "growing_area": "north-raised-bed",
+  "affected_plants": ["cherry tomato"],
+  "fertilizer": "fish emulsion",
+  "date": "2026-08-29",
+  "requires_user_review": true
 }
 ```
 
 ## Evaluation
 
-High-quality AI projects need evaluation.
+High-quality AI features require repeatable evaluation.
 
-Evaluation ideas:
+Evaluation cases should verify:
 
-- Recommendation contains source-backed facts.
-- Plant sun category matches zone sun hours.
-- Plant height does not block lower plants.
-- Plant is compatible with local hardiness/growing season.
-- Output includes clear avoid/reason fields.
+- Extracted fields match the supplied note or ask for missing information.
+- The assistant does not invent a garden area, plant, or event.
+- Recommendations cite retrieved sources.
+- Rotation advice respects stored crop history and deterministic constraints.
+- Unsafe or uncertain advice communicates its boundary.
 
 ## Observability
 
-Log:
-
-- User inputs.
-- Retrieved documents.
-- Agent steps.
-- Recommendation outputs.
-- User edits and feedback.
-
-This makes the project stronger for interviews because it shows concern for reliability, not just prompt demos.
-
+Record the user input, retrieved sources, structured output, user edits, error
+state, latency, and evaluation outcome. Sensitive garden data remains protected
+and follows the account's retention and deletion rules.

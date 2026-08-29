@@ -1,59 +1,57 @@
 # Sun-Aware Garden Planner
 
-An AI-assisted garden planning app that turns an address and yard imagery into a sun exposure map and planting plan.
+An AI-assisted garden operations and planning app for tracking gardens across
+seasons, organizing care, and creating reviewable planning guidance.
 
 ## Core Idea
 
-Many beginner gardeners know plant labels such as "full sun", "part sun", and "shade", but they do not know how those categories map to their real yard. They also cannot stand outside for 12 hours to track light and shadows.
+Garden information is often spread across memory, paper notes, photos, plant
+labels, and calendar reminders. This makes it hard to remember what happened,
+plan care, or rotate crops across growing areas and seasons.
 
 This app helps users answer:
 
-- Which parts of my yard receive 6-8+ hours of direct sun?
-- Which parts are part sun or mostly shaded?
-- How do my house, trees, fence, and garden structures cast shadows through the day?
-- What can I plant in each zone?
+- What did I plant, water, fertilize, or harvest in each growing area?
+- Which care tasks are due soon?
+- Which crops grew in this area last season?
+- What can I plant next while respecting rotation constraints?
 
 ## Product Goal
 
 Input:
 
-- Address or coordinates.
-- Licensed satellite-map reference from an address search, or a user-owned
-  aerial image.
-- Optional guided sky panoramas from important yard locations for later calibration.
-- User-marked yard boundary, house, trees, beds, fence, and other obstacles.
-- Approximate obstacle heights.
+- Gardens and named growing areas.
+- Plants, crop families, planting dates, and seasonal history.
+- Watering, fertilizer, transplanting, harvest, pest, and observation records.
+- Planned care tasks and free-text garden notes.
 
 Output:
 
-- Sun exposure heatmap.
-- Full sun, part sun, part shade, and shade zones.
-- Estimated direct sun hours for each area.
-- RAG-grounded plant recommendations for the user's local climate.
+- Searchable garden history and upcoming care tasks.
+- Crop-rotation warnings and planning suggestions.
+- Reviewable structured records extracted from a garden note.
+- RAG-grounded plant and care guidance with citations.
 
 ## MVP Scope
 
-The first version is intentionally semi-automatic:
+The first version focuses on a reliable seasonal workflow:
 
-1. Search for an address and inspect a licensed satellite-map reference.
-2. Use a user-owned aerial image when a map reference is unsuitable.
-3. Draw yard boundary, house footprint, trees, and planting areas.
-4. Enter approximate heights for house, fence, trees, and trellises.
-5. Simulate shadows every 15 minutes for a selected date or month.
-6. Generate a sun-hours heatmap.
-7. Recommend plants by sun category and local climate.
-
-The MVP does not need expensive satellite data, LiDAR, or fully automatic 3D reconstruction.
+1. Create a garden and named growing areas.
+2. Add plants and record garden activity.
+3. Create and complete future care tasks.
+4. Preserve the browser-saved garden through refreshes.
+5. Add crop rotation and AI-assisted record extraction after the operations
+   workflow is stable.
 
 ## Why This Is A Strong CS Project
 
-This is not a basic gardening tracker or CRUD app. It combines:
+This project combines:
 
 - Full-stack product engineering.
-- Geospatial UI.
-- Solar geometry.
-- Shadow projection.
-- Image annotation.
+- Temporal product and workflow design.
+- Relational data modeling.
+- API validation and authorization.
+- Deterministic crop-rotation rules.
 - RAG-grounded recommendations.
 - Agentic planning workflow.
 - Structured garden memory.
@@ -87,8 +85,8 @@ adoption rules are maintained in [Project Strategy](docs/project-strategy.md).
 
 ## Local App Setup
 
-This project now starts with a small Next.js + TypeScript frontend. The first
-implementation target is a manual sun-map MVP, not the full AI planner.
+This project currently starts with a small Next.js + TypeScript frontend. The
+active implementation target is the Garden Operations MVP.
 
 Install dependencies:
 
@@ -124,12 +122,11 @@ src/components/HeatmapLegend.tsx
 src/lib/types.ts
 ```
 
-## Current Yard Editor
+## Current Yard Editor Prototype
 
-The local yard editor uses a V2 metre-based reference grid, a simple polygon
-yard boundary, and a visible north bearing. A new project starts with a
-rectangular boundary. Drag boundary vertices to make a valid irregular outline,
-or add and remove vertices while three or more remain.
+The local yard editor is a retained prototype for future map-backed garden
+layout and sun-analysis research. It uses a V2 metre-based reference grid, a
+simple polygon yard boundary, and a visible north bearing.
 
 Choose house, tree, fence, or planting bed and click the reference grid to add
 it. Select an object to drag it, resize it with four corner controls, enter
@@ -144,8 +141,8 @@ the layout. This preserves the legacy layout without inventing a physical scale.
 The browser editor uses React-Konva with Konva 10 for client-side drawing.
 
 The address map uses Mapbox GL JS and Mapbox Search JS. Address results remain
-in the current map session; confirmed yard geometry is the browser-saved planner
-data.
+in the current map session. The active product roadmap defers map-based
+onboarding and yard-wide sun analysis until Garden Operations is stable.
 
 Run the component tests with:
 

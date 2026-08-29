@@ -4,61 +4,51 @@
 
 Sun-Aware Garden Planner
 
-Alternative names:
-
-- SunPlot AI
-- Garden Light Planner
-- Yard Sun Map
-
 ## One-Liner
 
-Upload your yard, get a sun map and planting plan.
+Plan, record, and improve a garden across seasons with structured history and
+AI-assisted guidance.
 
 ## Target User
 
-Beginner and intermediate gardeners who have a yard but do not understand how sun exposure changes across the space.
+Beginner and intermediate gardeners who need one reliable place to track what
+they planted, what care they performed, and what to plan next.
 
 The app is especially useful for people who:
 
-- Move into a new house with an empty yard.
-- Want to start raised beds or flower beds.
-- Do not know where full sun, part sun, and shade actually happen.
-- Need help deciding where to plant vegetables, herbs, flowers, shrubs, and perennials.
+- Start seeds, plant vegetables, flowers, herbs, shrubs, or perennials.
+- Forget watering, fertilizing, transplanting, or harvest details.
+- Want to avoid repeating crops in the same growing area every year.
+- Need help turning informal notes into an organized garden record.
+- Want plant and care advice that connects to their own garden history.
 
 ## Main User Problem
 
-Plant labels say things like "full sun" or "part shade", but beginners do not know how to measure that in a real yard. A yard can be partially shaded by the user's own house, trees, fences, sheds, and neighboring structures. Manual observation is slow and inconvenient.
+Garden information is often split across memory, paper notes, phone photos,
+plant labels, and calendar reminders. This makes seasonal planning and crop
+rotation difficult, especially when several growing areas have different
+histories.
 
 ## Core User Flow
 
-1. User enters address or coordinates.
-2. User uploads an aerial yard image.
-3. User marks yard boundary, house, tree canopy, fence, and planned planting areas.
-4. User enters rough heights for obstacles.
-5. App simulates solar movement and shadows.
-6. App outputs a color-coded sun exposure map.
-7. User clicks an area and sees recommended plants.
-
-## Desired Output
-
-The app should translate technical sun data into beginner-friendly zones:
-
-- 8+ hours: full sun, strong sun.
-- 6-8 hours: full sun, suitable for most fruiting vegetables.
-- 4-6 hours: part sun, suitable for many herbs, leafy greens, and some ornamentals.
-- 2-4 hours: part shade, suitable for shade-tolerant plants.
-- <2 hours: shade, limited edible crop potential.
+1. User creates a garden and named growing areas.
+2. User adds current plants and planting dates.
+3. User records watering, fertilizer, transplanting, harvest, and observations.
+4. User creates or completes care tasks.
+5. App shows garden history and upcoming work.
+6. Planner highlights rotation constraints and suggests next actions.
+7. AI converts a free-text note into a structured draft for review and answers
+   source-grounded planning questions.
 
 ## Differentiation
 
-Existing tools often focus on one of these:
+The product combines durable garden operations data with AI workflows that are
+reviewable and constrained by that data:
 
-- General garden planning.
-- AR sun path visualization.
-- Professional shadow analysis.
-- AI garden design mockups.
+garden history -> deterministic planning rules -> user-reviewed AI assistance
 
-This project focuses on a specific beginner workflow:
+## Deferred Research Direction
 
-address + yard image -> sun exposure zones -> plant recommendations.
-
+Map-backed yard layout and sun analysis remain future research capabilities.
+They require confirmed geometry, licensed or authorized source data, and a
+tested accuracy boundary before entering the main product workflow.

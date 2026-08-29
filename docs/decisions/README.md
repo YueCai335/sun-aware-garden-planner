@@ -54,6 +54,8 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0009](0009-use-address-guided-map-initialization-and-point-sky-calibration.md) | Use address-guided map initialization and point sky calibration | Accepted |
 | [ADR-0010](0010-use-mapbox-for-address-guided-map-initialization.md) | Use Mapbox for address-guided map initialization | Accepted |
 | [ADR-0011](0011-pin-secure-postcss-for-nextjs-15.md) | Pin secure PostCSS for Next.js 15 | Accepted |
+| [ADR-0012](0012-use-address-first-parcel-candidates-with-user-confirmation.md) | Use address-first parcel candidates with user confirmation | Accepted |
+| [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) | Prioritize garden operations and AI planning | Accepted |
 
 ## Interview Use
 
