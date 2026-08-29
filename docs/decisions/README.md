@@ -49,7 +49,8 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0004](0004-keep-physics-deterministic.md) | Keep solar physics deterministic and constrain AI | Accepted |
 | [ADR-0005](0005-use-hybrid-sun-analysis.md) | Combine an aerial yard model with panoramic calibration | Accepted |
 | [ADR-0006](0006-adopt-employment-oriented-production-stack.md) | Adopt an employment-oriented production stack | Accepted |
-| [ADR-0007](0007-use-metric-yard-coordinates-and-react-konva-editor.md) | Use metric yard coordinates and a React-Konva editor | Accepted |
+| [ADR-0007](0007-use-metric-yard-coordinates-and-react-konva-editor.md) | Use metric yard coordinates and a React-Konva editor | Superseded |
+| [ADR-0008](0008-use-metric-reference-grid-and-polygon-yard-boundary.md) | Use a metric reference grid and polygon yard boundary | Accepted |
 
 ## Interview Use
 
