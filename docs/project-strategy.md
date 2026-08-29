@@ -52,35 +52,41 @@ Help users understand where sunlight actually reaches their yard.
 
 Core capabilities:
 
-- Upload or select an aerial yard image.
-- Draw yard boundaries, houses, trees, fences, and planting beds.
-- Enter obstacle heights, location, and date.
-- Simulate shadows over time.
-- Generate a sun-hours heatmap.
+- Start from an address and a licensed satellite-map base layer.
+- Confirm or correct yard boundaries and important solar obstacles.
+- Enter obstacle heights, location, and date where the source data needs help.
+- Simulate shadows over time and generate a yard-wide sun-hours heatmap.
+- Capture point-level sky observations and compare them with modeled results.
 - Classify areas as full sun, part sun, part shade, or shade.
 
-Sun analysis uses a hybrid approach:
+Sun analysis uses an address-guided hybrid approach:
 
-#### Stage A: Aerial Model and Yard-Wide Heatmap
+#### Stage A: Map-Assisted Yard Model and Yard-Wide Heatmap
 
-- The user marks yard geometry and obstacle heights on an aerial image.
+- An address establishes a licensed visual base layer for the yard.
+- The user confirms or corrects the boundary and significant obstacles; the
+  metric editor handles precise geometry, height, and later corrections.
 - Deterministic solar geometry projects shadows at regular time intervals.
 - The app aggregates direct-sun minutes into a heatmap for the whole yard.
-- This is the first implementation target and must work without AI.
+- Image understanding can propose candidates in a later feature. User-confirmed
+  geometry remains the input to the deterministic model.
 
-#### Stage B: Panoramic Photo Calibration
+#### Stage B: Point Sky Capture and Calibration
 
-- The user selects several important points, such as planting beds or patios.
-- At each point, the user captures a guided sky panorama with location and
-  orientation metadata.
+- The user selects important points, such as planned growing locations or patios.
+- At each point, the user captures a guided, upward-looking sky panorama with
+  location and orientation metadata.
 - Computer vision creates a sky-versus-obstacle mask, with manual correction.
-- Calculated solar paths are tested against the mask to estimate direct-sun
-  hours at that point.
-- Point measurements calibrate the aerial model instead of replacing it.
+- Calculated solar paths intersect the mask to estimate direct-sun hours at that
+  point.
+- Point measurements calibrate and communicate the confidence of the yard model.
 
-Photos taken at several times of day may be used as validation evidence, but
-two or three ordinary photos are not treated as enough information to infer a
-complete yard model.
+#### Stage C: Observed Shadow Timeline
+
+- A fixed-camera sequence captured at specific times, such as morning, noon,
+  and afternoon, records observed shadows at those moments.
+- The sequence validates modeled results and communicates daily changes to the
+  user. It does not independently produce a continuous annual yard-wide map.
 
 Why this matters for hiring:
 
@@ -141,6 +147,7 @@ but shallow app.
 | API contract | REST, OpenAPI | Typed frontend-backend communication, generated documentation, and integration testing |
 | Primary database | PostgreSQL, SQLAlchemy, Alembic | Users, gardens, yard objects, analysis results, journals, crop history, and schema migrations |
 | Geospatial data | PostGIS | Coordinates, yard geometry, regions, distance queries, and future local-community search |
+| Maps and place search | Mapbox GL JS, Mapbox Search JS | Address-first satellite map, temporary address search, map attribution, and user-confirmed yard geometry overlays |
 | Vector search | pgvector | Retrieval over plant, climate, and horticultural knowledge for grounded AI responses |
 | Cache and background work | Redis, added when a measured workflow requires it | Cached analysis results, background AI jobs, and task status |
 | AI application layer | OpenAI API, RAG, structured outputs, tool calling | Plant recommendations, garden-log extraction, care planning, and crop-rotation assistance |
@@ -165,6 +172,8 @@ but shallow app.
 - Keep Redis conditional until caching or background-job measurements justify
   it.
 - Introduce PostGIS with geospatial persistence and distance queries.
+- Add Mapbox only with the address-guided map workflow, URL-restricted public
+  tokens, provider attribution, and documented usage monitoring.
 - Introduce pgvector with the RAG phase and evaluate retrieval quality.
 - Introduce Terraform with AWS deployment so the infrastructure it manages is
   real and reviewable.
@@ -238,11 +247,13 @@ Goal: a recruiter can open the app and complete one realistic workflow.
 
 Required:
 
-- Select or upload a yard image.
+- Start from an address and a licensed map reference, with an image-upload
+  fallback where the user has the rights to use the image.
 - Create a metric reference grid by entering its width and depth in metres,
   drawing a polygon yard boundary, and setting its north bearing.
-- Draw and edit yard, house, tree, fence, and planting bed shapes with direct
-  movement, resize handles, visible measurements, and precise numeric fields.
+- Confirm and edit yard, house, tree, fence, and planting bed shapes with
+  direct movement, resize handles, visible measurements, and precise numeric
+  fields.
 - Enter location, date, and obstacle heights in metres.
 - Generate a simplified sun-hours heatmap.
 - Include one built-in demo project.
@@ -261,8 +272,9 @@ is introduced.
 The phase is ready for review when a new user can complete this scenario in the
 deployed demo:
 
-1. Open the built-in demo yard or upload a yard image and see its metric
-   reference grid and north orientation.
+1. Open the built-in demo yard, start from an address-backed map reference,
+   or use an authorized yard image and see its metric reference grid and north
+   orientation.
 2. Draw or reshape a polygon yard boundary, then draw a house, a tree, a fence,
    and a planting bed using metre-based dimensions.
 3. Select an object, move or resize it directly, change its height or geometry,
@@ -371,11 +383,16 @@ Until then, resume bullets should describe only completed functionality.
 
 ## Current Priority
 
-Build Phase 1 first.
+Build Phase 1 in focused slices:
 
-The next engineering milestone is not AI, marketplace, or crop rotation. It is:
+1. Deliver a clear metric editor that works as a correction tool for geometry,
+   dimensions, and heights.
+2. Add address-guided map initialization before asking a new user to draw the
+   whole yard.
+3. Connect confirmed geometry to deterministic sun and shadow calculations.
+4. Add point sky capture and observed-shadow validation after the yard-wide
+   model has a testable result.
 
-> Make the canvas interaction real: draw, select, edit, and delete yard objects,
-> then connect those objects to a simple sun/shadow simulation.
-
-Everything else should be designed so it can attach cleanly later.
+AI, marketplace, and crop rotation remain later phases. The next engineering
+milestone is the address-guided entry flow using the Mapbox decision recorded in
+[ADR-0010](decisions/0010-use-mapbox-for-address-guided-map-initialization.md).

@@ -4,17 +4,19 @@
 
 Frontend:
 
-- Image upload.
-- Yard annotation canvas.
-- Map/geospatial view.
+- Address and map-provider onboarding flow.
+- Mapbox GL JS base map with Mapbox Search JS address search.
+- Yard annotation and correction canvas.
+- Map/geospatial reference view with provider attribution.
 - Heatmap rendering.
+- Point sky-capture guidance and observed-shadow timeline.
 - Plant recommendation UI.
 - Garden assistant chat.
 
 Backend:
 
 - User project storage.
-- Geocoding and coordinate handling.
+- Geocoding, coordinate handling, and map-provider adapter.
 - Solar position service.
 - Shadow simulation service.
 - Plant recommendation API.
@@ -25,8 +27,8 @@ Database:
 
 - Users.
 - Gardens.
-- Aerial images.
-- Annotated shapes.
+- User-owned capture assets and derived masks.
+- Confirmed geometry and source metadata.
 - Obstacles and heights.
 - Planting zones.
 - Sun exposure results.
@@ -104,6 +106,11 @@ The employment-oriented production baseline and its boundaries are recorded in
 Metric geometry, the polygon boundary, and the browser editing layer are
 recorded in
 [ADR-0008](decisions/0008-use-metric-reference-grid-and-polygon-yard-boundary.md).
+Address-guided map initialization and point sky calibration are recorded in
+[ADR-0009](decisions/0009-use-address-guided-map-initialization-and-point-sky-calibration.md).
+The selected address-map provider and its token, data, and usage boundaries are
+recorded in
+[ADR-0010](decisions/0010-use-mapbox-for-address-guided-map-initialization.md).
 
 ## Architecture Decisions
 

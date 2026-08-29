@@ -47,10 +47,12 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0002](0002-use-fastapi-python-backend.md) | Use FastAPI for the application backend | Accepted for backend phase |
 | [ADR-0003](0003-start-with-modular-monolith.md) | Start with a modular monolith | Accepted |
 | [ADR-0004](0004-keep-physics-deterministic.md) | Keep solar physics deterministic and constrain AI | Accepted |
-| [ADR-0005](0005-use-hybrid-sun-analysis.md) | Combine an aerial yard model with panoramic calibration | Accepted |
+| [ADR-0005](0005-use-hybrid-sun-analysis.md) | Combine an aerial yard model with panoramic calibration | Superseded |
 | [ADR-0006](0006-adopt-employment-oriented-production-stack.md) | Adopt an employment-oriented production stack | Accepted |
 | [ADR-0007](0007-use-metric-yard-coordinates-and-react-konva-editor.md) | Use metric yard coordinates and a React-Konva editor | Superseded |
 | [ADR-0008](0008-use-metric-reference-grid-and-polygon-yard-boundary.md) | Use a metric reference grid and polygon yard boundary | Accepted |
+| [ADR-0009](0009-use-address-guided-map-initialization-and-point-sky-calibration.md) | Use address-guided map initialization and point sky calibration | Accepted |
+| [ADR-0010](0010-use-mapbox-for-address-guided-map-initialization.md) | Use Mapbox for address-guided map initialization | Accepted |
 
 ## Interview Use
 
