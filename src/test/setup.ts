@@ -2,6 +2,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+vi.mock("react-konva", async () => {
+  const React = await import("react");
+  const Node = ({ children, text, onDragEnd, listening: _listening, closed: _closed, ...props }: { children?: React.ReactNode; text?: string; onDragEnd?: React.PointerEventHandler<HTMLDivElement>; listening?: boolean; closed?: boolean; [key: string]: unknown }) =>
+    React.createElement("div", { ...props, onPointerUp: onDragEnd }, children ?? text);
+  return { Stage: Node, Layer: Node, Line: Node, Rect: Node, Circle: Node, Group: Node, Text: Node };
+});
+
 const canvasContext = {
   beginPath: vi.fn(),
   clearRect: vi.fn(),
