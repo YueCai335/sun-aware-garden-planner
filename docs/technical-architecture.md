@@ -42,8 +42,9 @@ Frontend:
 - React.
 - Tailwind CSS.
 - shadcn/ui.
-- Leaflet or Mapbox.
-- Canvas/SVG annotation layer.
+- React-Konva for editable yard geometry, direct manipulation, and image layers.
+- Canvas for raster heatmaps.
+- MapLibre or Leaflet only when a geographic map workflow is introduced.
 
 Backend:
 
@@ -60,6 +61,8 @@ Data:
 
 Geometry:
 
+- Yard-local metric coordinates and north bearing on the frontend and backend
+  project model.
 - Shapely on backend.
 - Turf.js on frontend if client-side geometry is needed.
 
@@ -98,6 +101,8 @@ Deployment:
 
 The employment-oriented production baseline and its boundaries are recorded in
 [ADR-0006](decisions/0006-adopt-employment-oriented-production-stack.md).
+Metric geometry and the browser editing layer are recorded in
+[ADR-0007](decisions/0007-use-metric-yard-coordinates-and-react-konva-editor.md).
 
 ## Architecture Decisions
 
