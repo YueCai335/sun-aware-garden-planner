@@ -1,7 +1,8 @@
 # ADR-0005: Combine an Aerial Yard Model with Panoramic Calibration
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-15
+- Superseded by: [ADR-0009](0009-use-address-guided-map-initialization-and-point-sky-calibration.md)
 
 ## Context
 
