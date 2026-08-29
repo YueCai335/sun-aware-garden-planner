@@ -239,8 +239,8 @@ Goal: a recruiter can open the app and complete one realistic workflow.
 Required:
 
 - Select or upload a yard image.
-- Create a yard coordinate system by entering its width and depth in metres and
-  setting its north bearing.
+- Create a metric reference grid by entering its width and depth in metres,
+  drawing a polygon yard boundary, and setting its north bearing.
 - Draw and edit yard, house, tree, fence, and planting bed shapes with direct
   movement, resize handles, visible measurements, and precise numeric fields.
 - Enter location, date, and obstacle heights in metres.
@@ -261,10 +261,10 @@ is introduced.
 The phase is ready for review when a new user can complete this scenario in the
 deployed demo:
 
-1. Open the built-in demo yard or upload a yard image and see its dimensions
-   and north orientation.
-2. Draw a yard boundary, a house, a tree, a fence, and a planting bed using
-   metre-based dimensions.
+1. Open the built-in demo yard or upload a yard image and see its metric
+   reference grid and north orientation.
+2. Draw or reshape a polygon yard boundary, then draw a house, a tree, a fence,
+   and a planting bed using metre-based dimensions.
 3. Select an object, move or resize it directly, change its height or geometry,
    and delete it.
 4. Enter a location and date, then run the sun analysis.
@@ -277,8 +277,8 @@ Phase 1 verification requires:
 
 - Unit tests for solar-position, shadow-projection, and sun-hours accumulation
   functions.
-- Interaction coverage for drawing, moving, resizing, deleting, measuring,
-  saving, and clearing.
+- Interaction coverage for polygon boundaries, drawing, moving, resizing,
+  deleting, measuring, saving, and clearing.
 - A browser-level test for the acceptance scenario.
 - A production build and TypeScript check.
 - README instructions, screenshots, known limitations, and expected accuracy

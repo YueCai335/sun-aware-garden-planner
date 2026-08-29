@@ -1,7 +1,8 @@
 # ADR-0007: Use Metric Yard Coordinates and a React-Konva Editor
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-08-29
+- Superseded by: [ADR-0008](0008-use-metric-reference-grid-and-polygon-yard-boundary.md)
 
 ## Context
 
