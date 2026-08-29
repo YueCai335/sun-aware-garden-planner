@@ -285,3 +285,254 @@ select {
     min-width: 900px;
   }
 }
+
+.operations-shell {
+  min-height: 100vh;
+  background: #f3f5f2;
+  color: #1d2920;
+}
+
+.operations-header {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 48px 0 28px;
+}
+
+.operations-header-active {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #cfd7ce;
+}
+
+.operations-header h1,
+.garden-onboarding h2,
+.section-header h2 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.product-kicker,
+.section-eyebrow {
+  margin: 0 0 8px;
+  color: #397a5a;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.garden-onboarding {
+  width: min(600px, calc(100% - 48px));
+  margin: 76px auto;
+  border-top: 2px solid #397a5a;
+  padding-top: 24px;
+}
+
+.garden-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.garden-form label {
+  color: #374034;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inline-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.inline-form-row input,
+.area-form input,
+.area-form select {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.text-button,
+.remove-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #276445;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.text-button {
+  margin-top: 18px;
+}
+
+.workspace-message {
+  min-height: 22px;
+  margin: 20px 0 0;
+  color: #5d695f;
+  font-size: 14px;
+}
+
+.operations-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 64px;
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 42px 0 80px;
+}
+
+.operations-sidebar {
+  padding-top: 8px;
+}
+
+.sidebar-count {
+  margin: 0;
+  color: #33483a;
+  font-size: 15px;
+}
+
+.sidebar-count strong {
+  display: block;
+  color: #183a2a;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sidebar-note {
+  margin: 18px 0 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #cfd7ce;
+  padding-bottom: 18px;
+}
+
+.area-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) auto;
+  align-items: flex-end;
+  gap: 14px;
+  border-bottom: 1px solid #d7ddd6;
+  padding: 22px 0;
+}
+
+.area-form .field {
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.growing-area-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.growing-area-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 18px 20px;
+  background: #ffffff;
+}
+
+.growing-area-item h3,
+.empty-areas h3 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.growing-area-item p,
+.empty-areas p {
+  margin: 5px 0 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.remove-button {
+  color: #a44032;
+}
+
+.empty-areas {
+  margin-top: 20px;
+  border-bottom: 1px solid #d7ddd6;
+  padding: 24px 0;
+}
+
+.loading-state {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding-top: 48px;
+  color: #657268;
+}
+
+@media (max-width: 720px) {
+  .operations-header,
+  .operations-layout,
+  .garden-onboarding {
+    width: min(100% - 32px, 1180px);
+  }
+
+  .operations-header {
+    padding-top: 28px;
+  }
+
+  .operations-header-active,
+  .section-header,
+  .inline-form-row,
+  .area-form {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .operations-header-active,
+  .section-header {
+    display: grid;
+  }
+
+  .operations-layout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding-top: 28px;
+  }
+
+  .operations-sidebar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid #cfd7ce;
+    padding-bottom: 18px;
+  }
+
+  .sidebar-note {
+    margin: 0;
+  }
+}
