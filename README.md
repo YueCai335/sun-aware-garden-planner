@@ -113,6 +113,22 @@ Current starter structure:
 src/app/page.tsx
 src/components/Toolbar.tsx
 src/components/YardCanvas.tsx
+src/components/YardEditor.tsx
 src/components/HeatmapLegend.tsx
 src/lib/types.ts
+```
+
+## Current Yard Editor
+
+The starter app includes a locally saved manual yard editor. Choose a drawing
+tool and click the canvas to add a yard boundary, house, tree, fence, or
+planting bed. Select an element to drag it, adjust its geometry and obstacle
+height, or delete it. Clear creates an empty project, and Load demo restores
+the built-in example. Location, date, and yard elements persist in the current
+browser.
+
+Run the component tests with:
+
+```bash
+npm test
 ```

@@ -5,11 +5,22 @@ export type Point = {
 
 export type ShapeKind = "yard" | "house" | "tree" | "fence" | "planting-bed";
 
-export type YardShape = {
+export type DrawingTool = "select" | ShapeKind;
+
+export type YardElement = {
   id: string;
   kind: ShapeKind;
-  points: Point[];
-  heightMeters?: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  obstacleHeightMeters?: number;
+};
+
+export type YardProject = {
+  location: string;
+  date: string;
+  elements: YardElement[];
 };
 
 export type SunZone = {
