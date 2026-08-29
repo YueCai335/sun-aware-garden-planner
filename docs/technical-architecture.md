@@ -4,12 +4,15 @@
 
 Frontend:
 
-- Garden dashboard and growing-area management.
+- Garden dashboard, growing-area management, and metric planting layouts.
+- React-Konva planting-layout canvas with grid snapping and accessible precise
+  controls.
 - Plant, activity, and care-task forms.
 - Garden journal and seasonal history views.
 - Crop-rotation planning and constraint explanations.
 - AI-assisted note review and grounded-answer interface.
-- Existing Mapbox and React-Konva prototypes for future map-backed layout work.
+- Mapbox and place-search prototype retained for deferred map-backed layout
+  work.
 
 Backend:
 
@@ -37,7 +40,9 @@ Frontend:
 - Next.js, React, and TypeScript.
 - Tailwind CSS and shadcn/ui.
 - Vitest, React Testing Library, and Playwright.
-- Mapbox GL JS, Mapbox Search JS, and React-Konva retained for the deferred
+- React-Konva for measured growing-area layouts, placement circles, grid
+  snapping, and direct manipulation.
+- Mapbox GL JS and Mapbox Search JS retained for the deferred map-backed
   yard-layout module.
 
 Backend:
@@ -68,7 +73,8 @@ Deployment:
 
 ## Module Boundaries
 
-`garden-operations` owns gardens, areas, plants, events, tasks, and history.
+`garden-operations` owns gardens, measured growing-area boundaries, plant
+allocations, plants, events, tasks, and history.
 
 `garden-planning` owns deterministic rotation rules, scheduling calculations,
 and plan constraints.
@@ -87,8 +93,9 @@ evidence when it resumes.
 
 ## Data Flow
 
-1. A user creates a garden and named growing areas.
-2. The user records a planting, care event, note, photo, or future task.
+1. A user creates a garden, named growing areas, and optional measured layouts.
+2. The user places plant allocations on a metre-based grid and records a
+   planting, care event, note, photo, or future task.
 3. The frontend validates local form state and sends a typed request to the
    FastAPI API.
 4. The backend validates the request, applies authorization, and persists the
@@ -126,4 +133,5 @@ Decisions that affect architecture, product correctness, cost, security, or
 long-term maintainability are recorded in
 [Architecture Decision Records](decisions/README.md). The current product
 priority is recorded in
-[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md).
+[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md)
+and [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md).

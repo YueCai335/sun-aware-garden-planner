@@ -56,6 +56,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0011](0011-pin-secure-postcss-for-nextjs-15.md) | Pin secure PostCSS for Next.js 15 | Accepted |
 | [ADR-0012](0012-use-address-first-parcel-candidates-with-user-confirmation.md) | Use address-first parcel candidates with user confirmation | Accepted |
 | [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) | Prioritize garden operations and AI planning | Accepted |
+| [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md) | Use metric planting layouts with grid snapping | Accepted |
 
 ## Interview Use
 

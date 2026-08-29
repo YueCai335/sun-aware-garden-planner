@@ -32,12 +32,13 @@ histories.
 ## Core User Flow
 
 1. User creates a garden and named growing areas.
-2. User adds current plants and planting dates.
-3. User records watering, fertilizer, transplanting, harvest, and observations.
-4. User creates or completes care tasks.
-5. App shows garden history and upcoming work.
-6. Planner highlights rotation constraints and suggests next actions.
-7. AI converts a free-text note into a structured draft for review and answers
+2. User records measured growing-area layouts and planned plant spacing.
+3. User adds current plants and planting dates.
+4. User records watering, fertilizer, transplanting, harvest, and observations.
+5. User creates or completes care tasks.
+6. App shows garden history and upcoming work.
+7. Planner highlights rotation constraints and suggests next actions.
+8. AI converts a free-text note into a structured draft for review and answers
    source-grounded planning questions.
 
 ## Differentiation

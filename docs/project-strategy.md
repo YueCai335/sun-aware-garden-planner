@@ -49,6 +49,7 @@ Core capabilities:
 - Store fertilizer type, amount, application area, and photos where useful.
 - Track current plants and year-by-year crop history by growing area.
 - Maintain planned and completed care tasks.
+- Visualize measured growing-area layouts and planned plant spacing.
 
 ### 2. Garden Planning and Applied AI
 
@@ -85,10 +86,10 @@ licensed map or image inputs, confirmed geometry, obstacle heights,
 deterministic simulation, and tested accuracy boundaries. The current roadmap
 defers this work until the garden operations platform is stable.
 
-Existing Mapbox and React-Konva prototypes remain useful for later map-backed
-garden layout and sun-analysis exploration. Address-first parcel candidates,
-point sky capture, image understanding, and heatmap rendering belong to this
-future module.
+React-Konva supports metric planting layouts in the Garden Operations workflow
+and remains available for later map-backed garden layout and sun-analysis
+exploration. Address-first parcel candidates, point sky capture, image
+understanding, and heatmap rendering belong to this future module.
 
 ## Target Technology Stack and Project Use
 
@@ -96,6 +97,7 @@ future module.
 | --- | --- | --- |
 | Web frontend | Next.js, React, TypeScript | Garden dashboard, journals, planning workflows, AI review screens, and accessible responsive UI |
 | UI system | Tailwind CSS, shadcn/ui | Reusable forms, dialogs, navigation, tables, and consistent visual states |
+| Spatial layout editor | React-Konva | Metric growing-area layouts, grid snapping, and plant-allocation placement circles |
 | Application backend | Python, FastAPI, Pydantic | REST APIs, validation, garden operations, planning orchestration, and AI integration |
 | API contract | REST, OpenAPI | Typed frontend-backend communication, generated documentation, and integration testing |
 | Primary database | PostgreSQL, SQLAlchemy, Alembic | Users, gardens, growing areas, plants, events, tasks, crop history, and schema migrations |
@@ -192,6 +194,8 @@ workflow.
 Required:
 
 - Create one garden and named growing areas.
+- Define measured growing-area layouts and place planned plant allocations on a
+  metric grid.
 - Add current plants with plant name, crop family, and planting date.
 - Record watering, fertilizing, planting, transplanting, harvesting, and a
   free-text garden note.
@@ -203,10 +207,12 @@ Required:
 #### Phase 1 Acceptance Scenario
 
 1. Open the built-in garden or create a garden and named growing area.
-2. Add a plant and record a fertilizing event with type, amount, and date.
-3. Create a future care task and mark a completed task as done.
-4. Refresh the browser and recover the saved garden state.
-5. Clear a demo or create a new garden and receive an understandable empty
+2. Set a growing area's dimensions, place a labelled allocation circle, and
+   observe its snapped metric position.
+3. Add a plant and record a fertilizing event with type, amount, and date.
+4. Create a future care task and mark a completed task as done.
+5. Refresh the browser and recover the saved garden state and layout.
+6. Clear a demo or create a new garden and receive an understandable empty
    state.
 
 ### Phase 2: Backend and Persistence
@@ -294,14 +300,17 @@ Until then, resume bullets should describe only completed functionality.
 
 Build the Garden Operations MVP in focused slices:
 
-1. Define a browser-persisted garden, growing-area, plant, event, and task
-   model.
-2. Deliver the garden dashboard and journal workflow.
-3. Add task completion and date-based views.
-4. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
+1. Extend the browser-persisted growing-area model with metric layout and
+   plant-allocation data.
+2. Deliver a grid-snapped planting-layout editor with accessible precise
+   controls and browser persistence.
+3. Deliver the garden dashboard and journal workflow.
+4. Add task completion and date-based views.
+5. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
    stable product model.
-5. Add crop rotation and the AI assistant after persisted operations data is
+6. Add crop rotation and the AI assistant after persisted operations data is
    available.
 
 The current priority is recorded in
-[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md).
+[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md)
+and [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md).
