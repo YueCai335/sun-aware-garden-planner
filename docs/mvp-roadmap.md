@@ -7,6 +7,8 @@ Goal: help a gardener keep an accurate, useful seasonal record.
 Features:
 
 - Create a garden and named growing areas.
+- Define measured growing-area layouts and place planned plant allocations on
+  a metric grid.
 - Add plants with crop family and planting date.
 - Record watering, fertilizing, planting, transplanting, harvesting, and notes.
 - Create and complete future care tasks.
@@ -17,6 +19,8 @@ Success criteria:
 
 - A user can complete a real garden-record workflow in one session.
 - Refreshing the app retains the current browser-saved garden.
+- The layout preserves real dimensions, allocation diameters, and snapped
+  positions after refresh.
 - Users can find upcoming and completed care tasks.
 - Core interactions have focused tests.
 
