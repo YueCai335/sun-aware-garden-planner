@@ -4,118 +4,126 @@
 
 Frontend:
 
-- Address and map-provider onboarding flow.
-- Mapbox GL JS base map with Mapbox Search JS address search.
-- Yard annotation and correction canvas.
-- Map/geospatial reference view with provider attribution.
-- Heatmap rendering.
-- Point sky-capture guidance and observed-shadow timeline.
-- Plant recommendation UI.
-- Garden assistant chat.
+- Garden dashboard and growing-area management.
+- Plant, activity, and care-task forms.
+- Garden journal and seasonal history views.
+- Crop-rotation planning and constraint explanations.
+- AI-assisted note review and grounded-answer interface.
+- Existing Mapbox and React-Konva prototypes for future map-backed layout work.
 
 Backend:
 
-- User project storage.
-- Geocoding, coordinate handling, and map-provider adapter.
-- Solar position service.
-- Shadow simulation service.
-- Plant recommendation API.
-- RAG retrieval API.
-- Garden memory and logs.
+- Authentication and authorization.
+- Garden, growing-area, plant, event, task, and crop-history APIs.
+- Planning and crop-rotation service.
+- AI extraction, retrieval, evaluation, and feedback service.
+- Scheduled task generation and notification orchestration when measured need
+  supports background processing.
 
 Database:
 
-- Users.
-- Gardens.
-- User-owned capture assets and derived masks.
-- Confirmed geometry and source metadata.
-- Obstacles and heights.
-- Planting zones.
-- Sun exposure results.
-- Plant knowledge base.
-- Garden logs.
+- Users and gardens.
+- Growing areas and seasonal plans.
+- Plants, crop families, and plantings.
+- Garden events, notes, photos, and attachments.
+- Care tasks and completion history.
+- Crop rotation history and planning results.
+- Retrieved source metadata, AI drafts, reviews, and evaluation data.
 
 ## Target Stack
 
 Frontend:
 
-- Next.js.
-- TypeScript.
-- React.
-- Tailwind CSS.
-- shadcn/ui.
-- React-Konva for editable yard geometry, direct manipulation, and image layers.
-- Canvas for raster heatmaps.
-- MapLibre or Leaflet only when a geographic map workflow is introduced.
+- Next.js, React, and TypeScript.
+- Tailwind CSS and shadcn/ui.
+- Vitest, React Testing Library, and Playwright.
+- Mapbox GL JS, Mapbox Search JS, and React-Konva retained for the deferred
+  yard-layout module.
 
 Backend:
 
 - FastAPI with Python.
 - Pydantic for API validation and pytest for backend tests.
-- See [ADR-0002](decisions/0002-use-fastapi-python-backend.md) for the
-  decision and rejected alternatives.
+- REST and OpenAPI for the frontend-backend contract.
 
 Data:
 
-- PostgreSQL.
-- pgvector for plant knowledge retrieval.
-- PostGIS for persisted yard geometry, regional search, and distance queries.
-
-Geometry:
-
-- A yard-local metric reference grid, polygon boundary, and north bearing on
-  the frontend and backend project model.
-- Shapely on backend.
-- Turf.js on frontend if client-side geometry is needed.
-
-Solar:
-
-- Python astral or pvlib.
-- JavaScript suncalc for lightweight browser preview.
+- PostgreSQL with SQLAlchemy and Alembic.
+- pgvector for plant-knowledge retrieval.
+- PostGIS for garden locations, regional search, and deferred yard geometry.
 
 AI:
 
 - OpenAI API for structured outputs, RAG answer generation, tool calling, and
   planning assistance.
-- Evaluation datasets, citations, fallbacks, and guardrails for AI quality.
-- Avoid relying on AI for the core shadow math.
+- Evaluation datasets, citations, fallbacks, user review, and guardrails.
 
 Deployment:
 
-- Vercel for frontend.
-- AWS ECS Fargate for the FastAPI container.
-- Amazon RDS for PostgreSQL, PostGIS, and pgvector.
-- Amazon S3 for user images and derived assets.
-- CloudWatch for backend logs and metrics.
-- Docker for reproducible local development.
-- GitHub Actions for tests and linting.
-- Terraform for version-controlled AWS infrastructure.
+- Vercel for frontend previews and production hosting.
+- Docker and Docker Compose for a reproducible local environment.
+- GitHub Actions for tests, builds, security checks, and deployment gates.
+- AWS ECS Fargate, RDS, S3, CloudWatch, and Terraform when the backend is
+  deployed.
+
+## Module Boundaries
+
+`garden-operations` owns gardens, areas, plants, events, tasks, and history.
+
+`garden-planning` owns deterministic rotation rules, scheduling calculations,
+and plan constraints.
+
+`plant-knowledge` owns curated documents, retrieval metadata, and citations.
+
+`ai-assistant` owns structured extraction, grounded answers, user-review
+drafts, evaluations, and observability.
+
+`local-community` owns future listings, availability, reporting, moderation,
+and regional search.
+
+`sun-analysis` remains a deferred module. It will own confirmed yard geometry,
+authorized source metadata, deterministic solar calculations, and accuracy
+evidence when it resumes.
+
+## Data Flow
+
+1. A user creates a garden and named growing areas.
+2. The user records a planting, care event, note, photo, or future task.
+3. The frontend validates local form state and sends a typed request to the
+   FastAPI API.
+4. The backend validates the request, applies authorization, and persists the
+   record in PostgreSQL.
+5. Planning services read the stored history to create deterministic rotation
+   warnings and task suggestions.
+6. The AI assistant may create a structured draft or grounded answer. The user
+   reviews the draft before it becomes a persisted garden record.
 
 ## Staged Cloud Adoption
 
-- Phase 1 keeps the deterministic sun-map workflow local and deploys the web
-  demo when it is usable.
-- Phase 2 introduces FastAPI, PostgreSQL, Docker Compose, and CI before the AWS
-  production environment.
+- Phase 1 keeps the Garden Operations MVP browser-persisted and deploys the
+  web demo once the workflow is usable.
+- Phase 2 introduces FastAPI, PostgreSQL, Docker Compose, and GitHub Actions.
 - The first AWS deployment uses S3, RDS, ECS Fargate, and CloudWatch.
 - Terraform begins when those resources exist and can be validated.
-- Redis is introduced with a measured caching or background-job requirement.
+- Redis is introduced when scheduled processing or caching has measurable
+  value.
 
-The employment-oriented production baseline and its boundaries are recorded in
-[ADR-0006](decisions/0006-adopt-employment-oriented-production-stack.md).
-Metric geometry, the polygon boundary, and the browser editing layer are
-recorded in
-[ADR-0008](decisions/0008-use-metric-reference-grid-and-polygon-yard-boundary.md).
-Address-guided map initialization and point sky calibration are recorded in
-[ADR-0009](decisions/0009-use-address-guided-map-initialization-and-point-sky-calibration.md).
-The selected address-map provider and its token, data, and usage boundaries are
-recorded in
-[ADR-0010](decisions/0010-use-mapbox-for-address-guided-map-initialization.md).
+## Deferred Map and Sun Module
+
+The existing map and yard-editor prototypes remain in the repository. Future
+work can add address-guided onboarding, parcel candidates, confirmed yard
+geometry, and sun analysis after the core garden operations workflow is stable.
+
+The deferred module's earlier geometry, address-map, Mapbox, and parcel
+decisions are recorded in [ADR-0008](decisions/0008-use-metric-reference-grid-and-polygon-yard-boundary.md),
+[ADR-0009](decisions/0009-use-address-guided-map-initialization-and-point-sky-calibration.md),
+[ADR-0010](decisions/0010-use-mapbox-for-address-guided-map-initialization.md),
+and [ADR-0012](decisions/0012-use-address-first-parcel-candidates-with-user-confirmation.md).
 
 ## Architecture Decisions
 
 Decisions that affect architecture, product correctness, cost, security, or
 long-term maintainability are recorded in
-[Architecture Decision Records](decisions/README.md). Each record includes the
-selected approach, rejected alternatives, consequences, and conditions for
-reconsideration.
+[Architecture Decision Records](decisions/README.md). The current product
+priority is recorded in
+[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md).

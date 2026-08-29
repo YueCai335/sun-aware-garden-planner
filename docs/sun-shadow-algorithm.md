@@ -1,5 +1,8 @@
 # Sun And Shadow Algorithm
 
+> Status: Deferred research capability. The active product roadmap prioritizes
+> Garden Operations and AI Planning before sun-analysis implementation.
+
 ## Goal
 
 Estimate how many hours of direct sun each part of a yard receives.
