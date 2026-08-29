@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Toolbar } from "@/components/Toolbar";
+import { GardenMap } from "@/components/GardenMap";
 import { YardCanvas } from "@/components/YardCanvas";
 import { validateBoundary } from "@/lib/yardGeometry";
 import type { DrawingTool, LegacyYardElement, LegacyYardProject, Point, YardObject, YardObjectKind, YardProject } from "@/lib/types";
@@ -129,7 +130,10 @@ export function YardEditor() {
 
   return <>
     <Toolbar boundaryVertexCount={project.boundary.length} date={project.date} gridDepth={project.referenceGrid.depthMeters} gridWidth={project.referenceGrid.widthMeters} hasObjects={project.objects.length > 0} location={project.location} message={message} northBearingDegrees={project.northBearingDegrees} onAddBoundaryVertex={addBoundaryVertex} onClear={() => { updateProject((current) => ({ ...current, objects: [] })); setSelectedId(undefined); setMessage("All yard objects were cleared. Your grid and boundary remain available."); }} onDateChange={(date) => updateProject((current) => ({ ...current, date }))} onDelete={deleteSelected} onGridChange={updateGrid} onLoadDemo={() => { setProject(createDemoProject()); setSelectedId(undefined); setSelectedVertexIndex(undefined); setTool("select"); setMessage("Demo yard loaded."); }} onLocationChange={(location) => updateProject((current) => ({ ...current, location }))} onNorthBearingChange={updateNorthBearing} onRemoveBoundaryVertex={removeBoundaryVertex} onSelectedNumberChange={updateSelectedNumber} onToolChange={setTool} selectedObject={selectedObject} selectedVertexIndex={selectedVertexIndex} tool={tool} />
-    <YardCanvas boundary={project.boundary} grid={project.referenceGrid} northBearingDegrees={project.northBearingDegrees} objects={project.objects} onAdd={addObject} onDelete={deleteObject} onMove={moveObject} onMoveBoundaryVertex={moveBoundaryVertex} onResize={resizeObject} onSelect={(id) => { setSelectedId(id); setSelectedVertexIndex(undefined); }} onSelectVertex={(index) => { setSelectedVertexIndex(index); setSelectedId(undefined); }} selectedId={selectedId} selectedVertexIndex={selectedVertexIndex} tool={tool} />
+    <div className="editor-center">
+      <GardenMap />
+      <YardCanvas boundary={project.boundary} grid={project.referenceGrid} northBearingDegrees={project.northBearingDegrees} objects={project.objects} onAdd={addObject} onDelete={deleteObject} onMove={moveObject} onMoveBoundaryVertex={moveBoundaryVertex} onResize={resizeObject} onSelect={(id) => { setSelectedId(id); setSelectedVertexIndex(undefined); }} onSelectVertex={(index) => { setSelectedVertexIndex(index); setSelectedId(undefined); }} selectedId={selectedId} selectedVertexIndex={selectedVertexIndex} tool={tool} />
+    </div>
   </>;
 }
 

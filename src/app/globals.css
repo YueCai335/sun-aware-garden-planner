@@ -1,3 +1,5 @@
+@import "mapbox-gl/dist/mapbox-gl.css";
+
 :root {
   color: #172019;
   background: #f6f3ec;
@@ -31,6 +33,13 @@ select {
   gap: 16px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.editor-center {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
 }
 
 .panel {
@@ -174,6 +183,36 @@ select {
   overflow: auto;
 }
 
+.map-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.map-header {
+  padding: 16px 16px 0;
+}
+
+.map-header .map-status {
+  min-height: 21px;
+  margin: 12px 0;
+}
+
+.map-canvas {
+  height: 380px;
+  background: #d9e3d4;
+}
+
+.map-note {
+  margin: 0;
+  padding: 12px 16px 16px;
+  font-size: 13px;
+}
+
+.mapboxgl-ctrl-geocoder {
+  max-width: none;
+  width: 100%;
+}
+
 .yard-stage {
   display: block;
   background: #e9dfcb;
@@ -236,6 +275,10 @@ select {
 
   .canvas-panel {
     min-height: 520px;
+  }
+
+  .map-canvas {
+    height: 320px;
   }
 
   .yard-stage {
