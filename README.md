@@ -113,6 +113,7 @@ Current starter structure:
 src/app/page.tsx
 src/components/Toolbar.tsx
 src/components/YardCanvas.tsx
+src/components/YardCanvasClient.tsx
 src/components/YardEditor.tsx
 src/components/HeatmapLegend.tsx
 src/lib/types.ts
@@ -120,12 +121,22 @@ src/lib/types.ts
 
 ## Current Yard Editor
 
-The starter app includes a locally saved manual yard editor. Choose a drawing
-tool and click the canvas to add a yard boundary, house, tree, fence, or
-planting bed. Select an element to drag it, adjust its geometry and obstacle
-height, or delete it. Clear creates an empty project, and Load demo restores
-the built-in example. Location, date, and yard elements persist in the current
-browser.
+The local yard editor uses a V2 metre-based reference grid, a simple polygon
+yard boundary, and a visible north bearing. A new project starts with a
+rectangular boundary. Drag boundary vertices to make a valid irregular outline,
+or add and remove vertices while three or more remain.
+
+Choose house, tree, fence, or planting bed and click the reference grid to add
+it. Select an object to drag it, resize it with four corner controls, enter
+exact metre values, set obstacle height where it applies, or delete it. Object
+bounds stay inside the reference grid. Projects, including the north bearing,
+persist in the current browser through refreshes.
+
+Saved V1 drafts use percentage coordinates. On the first V2 visit, the editor
+asks for the real reference-grid width and depth before converting and saving
+the layout. This preserves the legacy layout without inventing a physical scale.
+
+The browser editor uses React-Konva with Konva 10 for client-side drawing.
 
 Run the component tests with:
 

@@ -109,6 +109,29 @@ select {
   margin-top: 16px;
 }
 
+.object-tool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tool-button {
+  min-height: 38px;
+  border: 1px solid #cfc7b8;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: white;
+  color: #263026;
+  cursor: pointer;
+}
+
+.tool-button-active {
+  border-color: #2f6b3f;
+  background: #e3f0e0;
+  color: #1d4f2b;
+}
+
 .primary-button,
 .secondary-button {
   min-height: 38px;
@@ -145,21 +168,42 @@ select {
 }
 
 .canvas-panel {
+  position: relative;
   min-height: 640px;
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
-.yard-canvas {
+.yard-stage {
   display: block;
-  width: 100%;
-  height: 640px;
-  background:
-    linear-gradient(90deg, rgba(47, 107, 63, 0.08) 1px, transparent 1px),
-    linear-gradient(rgba(47, 107, 63, 0.08) 1px, transparent 1px),
-    #e9dfcb;
-  background-size: 32px 32px;
+  background: #e9dfcb;
   cursor: crosshair;
+}
+
+.compass {
+  position: absolute;
+  z-index: 1;
+  top: 16px;
+  right: 18px;
+  display: grid;
+  justify-items: center;
+  width: 58px;
+  padding: 5px;
+  border: 1px solid #9cad99;
+  border-radius: 50%;
+  background: rgba(255, 253, 248, 0.92);
+  color: #1d4f2b;
+}
+
+.compass-arrow {
+  display: block;
+  font-size: 26px;
+  line-height: 26px;
+}
+
+.compass small {
+  color: #586152;
+  font-size: 11px;
 }
 
 .legend-list {
@@ -194,7 +238,7 @@ select {
     min-height: 520px;
   }
 
-  .yard-canvas {
-    height: 520px;
+  .yard-stage {
+    min-width: 900px;
   }
 }
