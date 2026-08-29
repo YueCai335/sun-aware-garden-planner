@@ -58,18 +58,20 @@ This is not a basic gardening tracker or CRUD app. It combines:
 - Structured garden memory.
 - Explainable AI output.
 
-## Suggested Tech Stack
+## Target Production Stack
 
-- Frontend: Next.js, TypeScript, React.
-- UI: Tailwind CSS, shadcn/ui.
-- Backend: FastAPI or Node.js.
-- Database: PostgreSQL.
-- Vector search: pgvector or Supabase Vector.
-- Mapping/geometry: Leaflet, Mapbox, Turf.js, Shapely.
-- Solar position: suncalc, astral, NOAA/NREL-style solar formulas.
-- AI: OpenAI API for RAG, structured output, and garden planning assistant.
-- Deployment: Vercel, Render/Fly.io, Supabase.
-- Engineering extras: Docker, GitHub Actions, test suite, logging.
+- Frontend: Next.js, React, TypeScript, Tailwind CSS, shadcn/ui.
+- Backend: Python, FastAPI, Pydantic, REST, OpenAPI.
+- Data: PostgreSQL, PostGIS, pgvector, SQLAlchemy, Alembic.
+- AI: OpenAI API, RAG, structured outputs, tool calling, evaluations.
+- Cloud: AWS ECS Fargate, RDS, S3, CloudWatch, plus Vercel for the web
+  application.
+- Delivery: Docker, Docker Compose, GitHub Actions, Terraform.
+- Quality: Vitest, React Testing Library, Playwright, pytest, structured
+  logging, OpenTelemetry, and request tracing.
+
+The canonical employment positioning, technology-to-feature mapping, and
+adoption rules are maintained in [Project Strategy](docs/project-strategy.md).
 
 ## Project Documents
 

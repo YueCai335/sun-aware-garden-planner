@@ -14,6 +14,15 @@ The project should prove practical software engineering ability first:
 
 ## Career Positioning
 
+Canonical employment positioning:
+
+> Production-grade full-stack and applied AI platform, with TypeScript/React,
+> Python/FastAPI, PostgreSQL, and AWS as the core stack.
+
+The project is designed to provide credible evidence for junior full-stack,
+backend, cloud application, and applied-AI roles. Technology coverage must come
+from working features, tests, deployment, and documented tradeoffs.
+
 Target roles:
 
 - Junior Backend Developer.
@@ -122,51 +131,50 @@ This pillar should come after the core planning and backend foundation are
 stable. Adding community features too early would turn the MVP into a broad
 but shallow app.
 
-## Recommended Tech Stack
+## Target Technology Stack and Project Use
 
-Frontend:
+| Layer | Selected technology | Actual project use |
+| --- | --- | --- |
+| Web frontend | Next.js, React, TypeScript | Yard editor, heatmap, garden records, community workflows, and accessible responsive UI |
+| UI system | Tailwind CSS, shadcn/ui | Reusable forms, dialogs, navigation, tables, and consistent visual states as the interface grows |
+| Application backend | Python, FastAPI, Pydantic | REST APIs, validation, sun-analysis orchestration, garden records, and AI integration |
+| API contract | REST, OpenAPI | Typed frontend-backend communication, generated documentation, and integration testing |
+| Primary database | PostgreSQL, SQLAlchemy, Alembic | Users, gardens, yard objects, analysis results, journals, crop history, and schema migrations |
+| Geospatial data | PostGIS | Coordinates, yard geometry, regions, distance queries, and future local-community search |
+| Vector search | pgvector | Retrieval over plant, climate, and horticultural knowledge for grounded AI responses |
+| Cache and background work | Redis, added when a measured workflow requires it | Cached analysis results, background AI jobs, and task status |
+| AI application layer | OpenAI API, RAG, structured outputs, tool calling | Plant recommendations, garden-log extraction, care planning, and crop-rotation assistance |
+| AI quality | Evaluation datasets, citations, fallbacks, guardrails | Repeatable checks for grounded answers, constraint compliance, and failure behavior |
+| Image storage | Amazon S3 | Aerial images, panoramic calibration photos, and derived image assets |
+| Cloud backend | AWS ECS Fargate, RDS, CloudWatch | Container hosting, managed PostgreSQL, logs, metrics, and production operations |
+| Web deployment | Vercel | Next.js preview deployments and the public web application |
+| Local environment | Docker, Docker Compose | Reproducible frontend, backend, PostgreSQL, and optional Redis environments |
+| CI/CD | GitHub Actions | Linting, type checks, tests, builds, security checks, and deployment gates |
+| Infrastructure | Terraform | Version-controlled AWS resources once cloud deployment begins |
+| Frontend tests | Vitest, React Testing Library, Playwright | Component behavior, interaction flows, and end-to-end user journeys |
+| Backend tests | pytest | Domain rules, APIs, persistence, solar calculations, and AI integration boundaries |
+| Observability | Structured logging, OpenTelemetry, CloudWatch | Error diagnosis, request tracing, performance evidence, and production monitoring |
+| Security | OAuth, authorization, rate limiting, secret management | Account access, private garden data, public-community controls, and protected external APIs |
 
-- Next.js.
-- React.
-- TypeScript.
-- Canvas or SVG annotation layer.
-- Playwright for end-to-end checks.
+### Adoption Rules
 
-Backend:
+- Add a technology when the current phase contains a working feature that uses
+  it.
+- Require code, tests, and operational evidence before listing a technology as
+  implemented.
+- Keep Redis conditional until caching or background-job measurements justify
+  it.
+- Introduce PostGIS with geospatial persistence and distance queries.
+- Introduce pgvector with the RAG phase and evaluate retrieval quality.
+- Introduce Terraform with AWS deployment so the infrastructure it manages is
+  real and reviewable.
+- Keep Kubernetes, Kafka, and independently deployed microservices outside the
+  roadmap until scale or reliability evidence creates a concrete requirement.
+- Keep deterministic physics and explicit garden constraints outside model
+  inference.
 
-- Python.
-- FastAPI.
-- Pydantic validation.
-- pytest for backend tests.
-
-Data:
-
-- PostgreSQL.
-- SQLAlchemy or SQLModel.
-- Alembic migrations.
-- pgvector later for plant knowledge retrieval.
-
-AI:
-
-- OpenAI API for structured outputs and explanations.
-- RAG over plant and climate knowledge.
-- Agent-style workflows only after the data model and deterministic rules are
-  stable.
-
-DevOps and quality:
-
-- Docker Compose for local frontend, backend, and database.
-- GitHub Actions for type checks, tests, and builds.
-- Basic logging and error responses.
-- Deployment with Vercel plus Render, Fly.io, or similar.
-
-Avoid for now:
-
-- Kubernetes.
-- Premature microservices.
-- Complex auth before the core demo works.
-- AI-first architecture where the model guesses facts that should come from
-  code or data.
+This stack baseline is recorded in
+[ADR-0006](decisions/0006-adopt-employment-oriented-production-stack.md).
 
 ## Architecture Principle
 
@@ -211,6 +219,17 @@ Interview-ready tradeoff:
 > explanation and planning. That makes the system easier to test and reduces
 > hallucination risk.
 
+## Execution and Acceptance Standard
+
+Every feature task must define its user value, scope, exclusions, acceptance
+criteria, and verification before implementation begins. A feature is complete
+when the agreed workflow works end to end, relevant tests pass, applicable
+build and type checks pass, and the task handoff explains limitations.
+
+An implementation claim requires working code and evidence. Planned
+technologies and future capabilities remain documented as planned until that
+evidence exists.
+
 ## Roadmap
 
 ### Phase 1: Demonstrable Sun Map MVP
@@ -233,6 +252,30 @@ Do not add AI yet unless the sun map already works.
 Panoramic photo calibration is deliberately excluded from this phase. The
 yard-wide deterministic model must be testable before photo-based calibration
 is introduced.
+
+#### Phase 1 Acceptance Scenario
+
+The phase is ready for review when a new user can complete this scenario in the
+deployed demo:
+
+1. Open the built-in demo yard or upload a yard image.
+2. Draw a yard boundary, a house, a tree, a fence, and a planting bed.
+3. Select an object, change its height or geometry, and delete it.
+4. Enter a location and date, then run the sun analysis.
+5. See a sun-hours heatmap that changes after a meaningful obstacle or date
+   change.
+6. Refresh the browser and recover the saved local project state.
+7. Clear the project and receive an understandable empty state.
+
+Phase 1 verification requires:
+
+- Unit tests for solar-position, shadow-projection, and sun-hours accumulation
+  functions.
+- Interaction coverage for drawing, editing, deleting, saving, and clearing.
+- A browser-level test for the acceptance scenario.
+- A production build and TypeScript check.
+- README instructions, screenshots, known limitations, and expected accuracy
+  boundaries.
 
 ### Phase 2: Backend and Persistence
 

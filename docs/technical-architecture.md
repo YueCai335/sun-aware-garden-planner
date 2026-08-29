@@ -33,7 +33,7 @@ Database:
 - Plant knowledge base.
 - Garden logs.
 
-## Suggested Stack
+## Target Stack
 
 Frontend:
 
@@ -56,7 +56,7 @@ Data:
 
 - PostgreSQL.
 - pgvector for plant knowledge retrieval.
-- PostGIS later if geospatial queries become important.
+- PostGIS for persisted yard geometry, regional search, and distance queries.
 
 Geometry:
 
@@ -70,27 +70,34 @@ Solar:
 
 AI:
 
-- OpenAI API for structured outputs, RAG answer generation, and planning assistant.
+- OpenAI API for structured outputs, RAG answer generation, tool calling, and
+  planning assistance.
+- Evaluation datasets, citations, fallbacks, and guardrails for AI quality.
 - Avoid relying on AI for the core shadow math.
 
 Deployment:
 
 - Vercel for frontend.
-- Render or Fly.io for backend.
-- Supabase for PostgreSQL and pgvector.
+- AWS ECS Fargate for the FastAPI container.
+- Amazon RDS for PostgreSQL, PostGIS, and pgvector.
+- Amazon S3 for user images and derived assets.
+- CloudWatch for backend logs and metrics.
 - Docker for reproducible local development.
 - GitHub Actions for tests and linting.
+- Terraform for version-controlled AWS infrastructure.
 
-## Why Not AWS First
+## Staged Cloud Adoption
 
-AWS can be added later, but it is not required for the MVP. For a student project, a deployed full-stack app with Docker, CI, PostgreSQL, vector search, and a clear demo is higher ROI than spending early time wiring cloud infrastructure.
+- Phase 1 keeps the deterministic sun-map workflow local and deploys the web
+  demo when it is usable.
+- Phase 2 introduces FastAPI, PostgreSQL, Docker Compose, and CI before the AWS
+  production environment.
+- The first AWS deployment uses S3, RDS, ECS Fargate, and CloudWatch.
+- Terraform begins when those resources exist and can be validated.
+- Redis is introduced with a measured caching or background-job requirement.
 
-AWS extensions for later:
-
-- S3 for image storage.
-- RDS for PostgreSQL.
-- Lambda for async analysis jobs.
-- ECS/Fargate for backend.
+The employment-oriented production baseline and its boundaries are recorded in
+[ADR-0006](decisions/0006-adopt-employment-oriented-production-stack.md).
 
 ## Architecture Decisions
 
