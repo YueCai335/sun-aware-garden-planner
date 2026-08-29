@@ -18,7 +18,8 @@ This app helps users answer:
 Input:
 
 - Address or coordinates.
-- Aerial yard image, such as a Google Maps or Apple Maps screenshot.
+- Licensed satellite-map reference from an address search, or a user-owned
+  aerial image.
 - Optional guided sky panoramas from important yard locations for later calibration.
 - User-marked yard boundary, house, trees, beds, fence, and other obstacles.
 - Approximate obstacle heights.
@@ -34,8 +35,8 @@ Output:
 
 The first version is intentionally semi-automatic:
 
-1. Upload an aerial yard image.
-2. Enter address or coordinates.
+1. Search for an address and inspect a licensed satellite-map reference.
+2. Use a user-owned aerial image when a map reference is unsuitable.
 3. Draw yard boundary, house footprint, trees, and planting areas.
 4. Enter approximate heights for house, fence, trees, and trellises.
 5. Simulate shadows every 15 minutes for a selected date or month.
@@ -107,6 +108,10 @@ Open:
 http://localhost:3000
 ```
 
+To enable address search and the satellite map, copy `.env.local.example` to
+`.env.local` and replace its placeholder with a URL-restricted Mapbox public
+token. Keep `.env.local` outside Git.
+
 Current starter structure:
 
 ```text
@@ -137,6 +142,10 @@ asks for the real reference-grid width and depth before converting and saving
 the layout. This preserves the legacy layout without inventing a physical scale.
 
 The browser editor uses React-Konva with Konva 10 for client-side drawing.
+
+The address map uses Mapbox GL JS and Mapbox Search JS. Address results remain
+in the current map session; confirmed yard geometry is the browser-saved planner
+data.
 
 Run the component tests with:
 
