@@ -48,6 +48,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0003](0003-start-with-modular-monolith.md) | Start with a modular monolith | Accepted |
 | [ADR-0004](0004-keep-physics-deterministic.md) | Keep solar physics deterministic and constrain AI | Accepted |
 | [ADR-0005](0005-use-hybrid-sun-analysis.md) | Combine an aerial yard model with panoramic calibration | Accepted |
+| [ADR-0006](0006-adopt-employment-oriented-production-stack.md) | Adopt an employment-oriented production stack | Accepted |
 
 ## Interview Use
 
