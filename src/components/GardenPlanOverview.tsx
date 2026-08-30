@@ -17,6 +17,7 @@ import {
 type GardenPlanOverviewProps = {
   plan: GardenPlan;
   growingAreas: GrowingArea[];
+  compact?: boolean;
   editable?: boolean;
   onPlanChange?: (plan: GardenPlan) => void;
   onPlacementChange?: (areaId: string, placement: PlanPlacement) => void;
@@ -28,6 +29,7 @@ const CANVAS_PADDING = 34;
 export function GardenPlanOverview({
   plan,
   growingAreas,
+  compact = false,
   editable = false,
   onPlanChange,
   onPlacementChange,
@@ -51,6 +53,20 @@ export function GardenPlanOverview({
     )
       setSelectedAreaId(undefined);
   }, [growingAreas, selectedAreaId]);
+
+  if (compact)
+    return (
+      <div aria-hidden="true" className="garden-plan-thumbnail">
+        <GardenPlanCanvas
+          compact
+          growingAreas={growingAreas}
+          interactive={false}
+          onMove={() => undefined}
+          onSelect={() => undefined}
+          plan={plan}
+        />
+      </div>
+    );
 
   const savePlanDimensions = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -159,6 +175,7 @@ export function GardenPlanOverview({
       <div className={editable ? "garden-plan-grid" : "plan-canvas-wrap"}>
         <div className="plan-canvas-wrap">
           <GardenPlanCanvas
+            compact={false}
             growingAreas={growingAreas}
             interactive={editable}
             onEditLayout={onEditLayout}
@@ -262,6 +279,7 @@ export function GardenPlanOverview({
 type GardenPlanCanvasProps = {
   plan: GardenPlan;
   growingAreas: GrowingArea[];
+  compact: boolean;
   interactive: boolean;
   onMove: (areaId: string, event: KonvaEventObject<DragEvent>) => void;
   onSelect: (areaId: string) => void;
@@ -271,19 +289,21 @@ type GardenPlanCanvasProps = {
 function GardenPlanCanvas({
   plan,
   growingAreas,
+  compact,
   interactive,
   onMove,
   onSelect,
   onEditLayout,
 }: GardenPlanCanvasProps) {
-  const scale = pixelsPerMeter(plan);
-  const width = plan.widthMeters * scale + CANVAS_PADDING * 2;
-  const height = plan.depthMeters * scale + CANVAS_PADDING * 2;
-  const verticalGrid = Array.from(
+  const padding = compact ? 14 : CANVAS_PADDING;
+  const scale = pixelsPerMeter(plan, compact);
+  const width = plan.widthMeters * scale + padding * 2;
+  const height = plan.depthMeters * scale + padding * 2;
+  const verticalGrid = compact ? [] : Array.from(
     { length: Math.floor(plan.widthMeters) + 1 },
     (_, index) => index,
   );
-  const horizontalGrid = Array.from(
+  const horizontalGrid = compact ? [] : Array.from(
     { length: Math.floor(plan.depthMeters) + 1 },
     (_, index) => index,
   );
@@ -302,59 +322,61 @@ function GardenPlanCanvas({
           stroke="#183a2a"
           strokeWidth={2}
           width={plan.widthMeters * scale}
-          x={CANVAS_PADDING}
-          y={CANVAS_PADDING}
+          x={padding}
+          y={padding}
         />
-        {verticalGrid.map((metre) => (
+        {!compact && verticalGrid.map((metre) => (
           <Line
             key={`vertical-${metre}`}
             points={[
-              CANVAS_PADDING + metre * scale,
-              CANVAS_PADDING,
-              CANVAS_PADDING + metre * scale,
-              CANVAS_PADDING + plan.depthMeters * scale,
+              padding + metre * scale,
+              padding,
+              padding + metre * scale,
+              padding + plan.depthMeters * scale,
             ]}
             stroke="#cfd7ce"
             strokeWidth={1}
           />
         ))}
-        {horizontalGrid.map((metre) => (
+        {!compact && horizontalGrid.map((metre) => (
           <Line
             key={`horizontal-${metre}`}
             points={[
-              CANVAS_PADDING,
-              CANVAS_PADDING + metre * scale,
-              CANVAS_PADDING + plan.widthMeters * scale,
-              CANVAS_PADDING + metre * scale,
+              padding,
+              padding + metre * scale,
+              padding + plan.widthMeters * scale,
+              padding + metre * scale,
             ]}
             stroke="#cfd7ce"
             strokeWidth={1}
           />
         ))}
-        {verticalGrid.map((metre) => (
+        {!compact && verticalGrid.map((metre) => (
           <Text
             fontSize={11}
             key={`x-label-${metre}`}
             text={`${metre} m`}
-            x={CANVAS_PADDING + metre * scale - 10}
+            x={padding + metre * scale - 10}
             y={12}
           />
         ))}
-        {horizontalGrid.map((metre) => (
+        {!compact && horizontalGrid.map((metre) => (
           <Text
             fontSize={11}
             key={`y-label-${metre}`}
             text={`${metre} m`}
             x={3}
-            y={CANVAS_PADDING + metre * scale - 6}
+            y={padding + metre * scale - 6}
           />
         ))}
         {measuredAreas.map((area) => (
           <Group
             aria-label={
-              interactive
-                ? `Select ${area.name} on Garden Plan`
-                : `${area.name} on Garden Plan`
+              compact
+                ? undefined
+                : interactive
+                  ? `Select ${area.name} on Garden Plan`
+                  : `${area.name} on Garden Plan`
             }
             draggable={interactive}
             key={area.id}
@@ -364,8 +386,8 @@ function GardenPlanCanvas({
             onDragEnd={(event) => onMove(area.id, event)}
             onTap={() => onSelect(area.id)}
             rotation={area.planPlacement.rotationDegrees}
-            x={CANVAS_PADDING + area.planPlacement.x * scale}
-            y={CANVAS_PADDING + area.planPlacement.y * scale}
+            x={padding + area.planPlacement.x * scale}
+            y={padding + area.planPlacement.y * scale}
           >
             <Line
               closed
@@ -388,34 +410,38 @@ function GardenPlanCanvas({
                   x={allocation.x * scale}
                   y={allocation.y * scale}
                 />
-                <Text
-                  fill="#4a2b00"
-                  fontSize={11}
-                  listening={false}
-                  text={allocation.label}
-                  x={allocation.x * scale + 5}
-                  y={allocation.y * scale + 4}
-                />
+                {!compact ? (
+                  <Text
+                    fill="#4a2b00"
+                    fontSize={11}
+                    listening={false}
+                    text={allocation.label}
+                    x={allocation.x * scale + 5}
+                    y={allocation.y * scale + 4}
+                  />
+                ) : null}
               </Group>
             ))}
-            <Text
-              fill="#183a2a"
-              fontSize={13}
-              fontStyle="bold"
-              listening={false}
-              text={area.name}
-              x={6}
-              y={6}
-            />
+            {!compact ? (
+              <Text
+                fill="#183a2a"
+                fontSize={13}
+                fontStyle="bold"
+                listening={false}
+                text={area.name}
+                x={6}
+                y={6}
+              />
+            ) : null}
           </Group>
         ))}
-        {!measuredAreas.length ? (
+        {!compact && !measuredAreas.length ? (
           <Text
             fill="#657268"
             fontSize={14}
             text="Set up a measured layout in Garden Management to show it here."
-            x={CANVAS_PADDING + 16}
-            y={CANVAS_PADDING + 16}
+            x={padding + 16}
+            y={padding + 16}
           />
         ) : null}
       </Layer>
@@ -423,9 +449,16 @@ function GardenPlanCanvas({
   );
 }
 
-function pixelsPerMeter(plan: GardenPlan) {
+function pixelsPerMeter(plan: GardenPlan, compact = false) {
+  const maxWidth = compact ? 210 : 760;
+  const maxDepth = compact ? 150 : 460;
+  const maxScale = compact ? 28 : 82;
+  const minScale = compact ? 12 : 28;
   return Math.max(
-    28,
-    Math.min(82, Math.min(760 / plan.widthMeters, 460 / plan.depthMeters)),
+    minScale,
+    Math.min(
+      maxScale,
+      Math.min(maxWidth / plan.widthMeters, maxDepth / plan.depthMeters),
+    ),
   );
 }
