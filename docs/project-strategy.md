@@ -42,8 +42,9 @@ Help users maintain a durable record across a growing season.
 
 Core capabilities:
 
-- Create gardens and named growing areas, such as an in-ground zone, raised
-  bed, container group, or greenhouse shelf.
+- Create, switch, rename, and manage separate gardens, such as a home garden
+  and a community plot. Each garden contains named planting areas, such as an
+  in-ground zone, raised bed, container group, or greenhouse shelf.
 - Record seed starting, planting, transplanting, watering, fertilizing,
   pruning, harvests, pests, and diseases.
 - Store fertilizer type, amount, application area, and photos where useful.
@@ -195,9 +196,11 @@ workflow.
 
 Required:
 
-- Create one garden and named growing areas.
-- Arrange growing areas on a measured garden plan and open an area from that
-  overview.
+- Create and switch between gardens, then manage named planting areas within
+  each garden.
+- Open a visual garden home and arrange planting areas on its measured plan.
+- Use a dedicated management workspace to change garden dimensions, garden
+  names, planting-area names, planting-area types, and layouts.
 - Define measured growing-area layouts and place planned plant allocations on a
   metric grid.
 - Add current plants with plant name, crop family, and planting date.
@@ -210,7 +213,7 @@ Required:
 
 #### Phase 1 Acceptance Scenario
 
-1. Open the built-in garden or create a garden, arrange named growing areas on
+1. Open the built-in garden or create a garden, arrange named planting areas on
    its plan, and open one area from the overview.
 2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.

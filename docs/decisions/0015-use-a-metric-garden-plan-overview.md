@@ -1,6 +1,6 @@
 # ADR-0015: Use a Metric Garden Plan Overview
 
-- Status: Accepted
+- Status: Superseded by [ADR-0017](0017-use-a-multi-garden-home-and-management-workspace.md)
 - Date: 2026-08-30
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) and [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md)
 
