@@ -49,6 +49,8 @@ Core capabilities:
 - Store fertilizer type, amount, application area, and photos where useful.
 - Track current plants and year-by-year crop history by growing area.
 - Maintain planned and completed care tasks.
+- Show an at-a-glance garden plan with growing areas arranged at relative
+  metric scale.
 - Visualize measured growing-area layouts and planned plant spacing.
 
 ### 2. Garden Planning and Applied AI
@@ -194,6 +196,8 @@ workflow.
 Required:
 
 - Create one garden and named growing areas.
+- Arrange growing areas on a measured garden plan and open an area from that
+  overview.
 - Define measured growing-area layouts and place planned plant allocations on a
   metric grid.
 - Add current plants with plant name, crop family, and planting date.
@@ -206,8 +210,9 @@ Required:
 
 #### Phase 1 Acceptance Scenario
 
-1. Open the built-in garden or create a garden and named growing area.
-2. Set a growing area's dimensions, place a labelled allocation circle, and
+1. Open the built-in garden or create a garden, arrange named growing areas on
+   its plan, and open one area from the overview.
+2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.
 3. Add a plant and record a fertilizing event with type, amount, and date.
 4. Create a future care task and mark a completed task as done.
@@ -300,17 +305,16 @@ Until then, resume bullets should describe only completed functionality.
 
 Build the Garden Operations MVP in focused slices:
 
-1. Extend the browser-persisted growing-area model with metric layout and
-   plant-allocation data.
-2. Deliver a grid-snapped planting-layout editor with accessible precise
-   controls and browser persistence.
-3. Deliver the garden dashboard and journal workflow.
-4. Add task completion and date-based views.
-5. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
+1. Deliver a garden-plan overview with metric growing-area placement and
+   browser persistence.
+2. Deliver the garden dashboard and journal workflow.
+3. Add task completion and date-based views.
+4. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
    stable product model.
-6. Add crop rotation and the AI assistant after persisted operations data is
+5. Add crop rotation and the AI assistant after persisted operations data is
    available.
 
 The current priority is recorded in
-[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md)
-and [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md).
+[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md),
+[ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md),
+and [ADR-0015](decisions/0015-use-a-metric-garden-plan-overview.md).
