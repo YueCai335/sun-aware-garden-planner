@@ -1,81 +1,86 @@
 # MVP Roadmap
 
-## Phase 1: Manual Sun Map
+## Phase 1: Garden Operations MVP
 
-Goal: generate a usable sun-hours heatmap from user-marked shapes.
-
-Features:
-
-- Upload aerial image.
-- Enter address or coordinates.
-- Draw yard boundary.
-- Draw obstacles: house, trees, fence, shed, trellis.
-- Enter obstacle heights.
-- Select date or month.
-- Run shadow simulation.
-- Display sun-hours heatmap.
-
-Success criteria:
-
-- User can visually identify full sun, part sun, and shade zones.
-- Output is explainable and adjustable.
-- No AI dependency required for the core sun calculation.
-
-## Phase 2: Plant Recommendations
-
-Goal: convert sun zones into useful planting advice.
+Goal: help a gardener keep an accurate, useful seasonal record.
 
 Features:
 
-- Plant database with sun needs, height, spacing, hardiness, and basic notes.
-- Local climate inputs: hardiness zone, frost dates, growing season.
-- RAG-grounded recommendation explanations.
-- User can click a zone and ask "what can I plant here?"
+- Create a garden and named growing areas.
+- Define measured growing-area layouts and place planned plant allocations on
+  a metric grid.
+- Add plants with crop family and planting date.
+- Record watering, fertilizing, planting, transplanting, harvesting, and notes.
+- Create and complete future care tasks.
+- Preserve data in the browser for the initial demo.
+- Provide a built-in demo garden and clear empty states.
 
 Success criteria:
 
-- Recommendations cite sources or local database facts.
-- App explains why a plant fits or does not fit.
+- A user can complete a real garden-record workflow in one session.
+- Refreshing the app retains the current browser-saved garden.
+- The layout preserves real dimensions, allocation diameters, and snapped
+  positions after refresh.
+- Users can find upcoming and completed care tasks.
+- Core interactions have focused tests.
 
-## Phase 3: Agentic Garden Planner
+## Phase 2: Backend and Persistence
 
-Goal: create planning workflows instead of single-turn answers.
-
-Agents:
-
-- Sun Analysis Agent: summarizes light conditions.
-- Plant Matching Agent: filters plants by sun, height, zone, and season.
-- Layout Agent: proposes a planting layout.
-- Care Task Agent: turns plan into monthly tasks.
-- Journal Agent: converts user notes into structured garden memory.
-
-Success criteria:
-
-- Agent output is structured and inspectable.
-- User can revise constraints, such as "low maintenance" or "more edible plants".
-
-## Phase 4: Photo Calibration
-
-Goal: use real yard photos to calibrate simulated shadows.
+Goal: establish a production-style application and data foundation.
 
 Features:
 
-- Ask user to take photos at 9 AM, 12 PM, 3 PM, and optionally 5 PM on a sunny day.
-- User marks observed shadow boundaries.
-- System compares simulated shadows with observed shadows.
-- App suggests adjusting obstacle height or shape.
+- FastAPI REST API with OpenAPI documentation.
+- PostgreSQL persistence and Alembic migrations.
+- User, garden, growing-area, planting, event, and task APIs.
+- Validation, authorization, backend tests, Docker Compose, and GitHub Actions.
+
+## Phase 3: Crop Rotation and Planning
+
+Goal: use stored history to support next-season choices.
+
+Features:
+
+- Crop-family history by growing area and season.
+- Deterministic rotation warnings and alternatives.
+- Date-based task suggestions.
+- User-editable planting-plan drafts.
 
 Success criteria:
 
-- Simulated shadow map becomes closer to real observed shadow boundaries.
+- Each warning links to explicit stored history and a deterministic rule.
+- Tests cover rotation and planning edge cases.
 
-## Phase 5: Advanced Automation
+## Phase 4: Applied AI Assistant
 
-Possible later features:
+Goal: add reviewable AI workflows on top of reliable garden data.
 
-- Automatic house/tree segmentation from aerial imagery.
-- Computer vision support for leaf disease and pest symptoms.
-- Weather-aware watering and frost alerts.
-- Year-to-year crop rotation memory.
-- Optional cloud deployment on AWS if needed for resume or scale.
+Features:
 
+- Convert a free-text garden note into a structured record draft.
+- Retrieve source-grounded plant and care advice.
+- Require user review before saving extracted fields.
+- Evaluate fixed extraction and recommendation cases.
+- Record citations, fallbacks, errors, and user corrections.
+
+## Phase 5: Local Garden Community
+
+Goal: support regional exchange after trusted account and garden workflows are
+stable.
+
+Possible features:
+
+- Listings for seedlings, seeds, cuttings, supplies, and local deals.
+- Region-based search and availability status.
+- Reporting, moderation, and safety controls.
+
+## Phase 6: Deferred Sun Intelligence Research
+
+Goal: resume sun analysis only with a bounded data and accuracy plan.
+
+Candidate features:
+
+- Confirmed yard geometry and obstacle details.
+- Licensed map data or authorized image inputs.
+- Deterministic solar calculations with documented limitations.
+- Point-level observation before any yard-wide heatmap claim.

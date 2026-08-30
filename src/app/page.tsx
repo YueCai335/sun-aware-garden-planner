@@ -1,15 +1,5 @@
-import { HeatmapLegend } from "@/components/HeatmapLegend";
-import { Toolbar } from "@/components/Toolbar";
-import { YardCanvas } from "@/components/YardCanvas";
+import { GardenWorkspace } from "@/components/GardenWorkspace";
 
 export default function Home() {
-  return (
-    <main className="app-shell">
-      <section className="workspace">
-        <Toolbar />
-        <YardCanvas />
-        <HeatmapLegend />
-      </section>
-    </main>
-  );
+  return <GardenWorkspace />;
 }
