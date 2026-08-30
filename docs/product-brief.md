@@ -31,7 +31,8 @@ histories.
 
 ## Core User Flow
 
-1. User creates a garden and named growing areas.
+1. User creates a garden, names growing areas, and arranges them on a measured
+   garden plan.
 2. User records measured growing-area layouts and planned plant spacing.
 3. User adds current plants and planting dates.
 4. User records watering, fertilizer, transplanting, harvest, and observations.
