@@ -313,23 +313,6 @@ select {
   gap: 8px;
 }
 
-.garden-switcher {
-  display: grid;
-  gap: 5px;
-  color: #374034;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.garden-switcher select {
-  min-height: 38px;
-  border: 1px solid #b8c5ba;
-  border-radius: 6px;
-  padding: 0 10px;
-  background: #ffffff;
-  color: #1d2920;
-}
-
 .operations-header h1,
 .garden-onboarding h2,
 .section-header h2 {
@@ -435,32 +418,105 @@ select {
   margin: 0;
 }
 
-.record-location-note {
+.garden-dashboard {
+  display: grid;
+  gap: 28px;
+}
+
+.dashboard-heading,
+.selected-garden-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-top: 26px;
+}
+
+.dashboard-heading {
+  border-bottom: 1px solid #cfd7ce;
+  padding-bottom: 18px;
+}
+
+.dashboard-heading h2,
+.selected-garden-actions h2 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 24px;
+}
+
+.dashboard-heading > p {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.garden-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.garden-thumbnail-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid #cfd7ce;
   border-radius: 8px;
-  padding: 18px 20px;
+  padding: 0;
+  background: #ffffff;
+  color: #1d2920;
+  cursor: pointer;
+  text-align: left;
+}
+
+.garden-thumbnail-card:hover,
+.garden-thumbnail-card:focus-visible {
+  border-color: #397a5a;
+  box-shadow: 0 0 0 3px #d7ead9;
+  outline: 0;
+}
+
+.garden-thumbnail-card[aria-pressed="true"] {
+  border: 2px solid #276445;
+  box-shadow: 0 0 0 3px #d7ead9;
+}
+
+.garden-plan-thumbnail {
+  overflow: hidden;
+  border-bottom: 1px solid #d7ddd6;
   background: #ffffff;
 }
 
-.record-location-note h2,
-.record-location-note p {
-  margin: 0;
+.garden-card-details {
+  display: grid;
+  gap: 4px;
+  padding: 0 16px 16px;
 }
 
-.record-location-note h2 {
+.garden-card-details strong {
   color: #183a2a;
-  font-size: 17px;
 }
 
-.record-location-note p {
-  flex: 1;
+.garden-card-details span {
   color: #657268;
   font-size: 14px;
+}
+
+.selected-garden-actions {
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.selected-garden-actions .section-eyebrow {
+  margin-bottom: 6px;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sidebar-note {
@@ -880,14 +936,14 @@ select {
   .planting-form,
   .plan-dimensions,
   .layout-dimensions,
-  .record-location-note {
+  .selected-garden-actions {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
   .operations-header-active,
   .section-header,
-  .record-location-note {
+  .selected-garden-actions {
     display: grid;
   }
 
