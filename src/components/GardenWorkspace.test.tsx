@@ -34,7 +34,7 @@ describe("GardenWorkspace", () => {
 
     await user.click(await screen.findByRole("button", { name: "Load demo garden" }));
     expect(await screen.findByRole("heading", { name: "Demo Garden" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Sample raised bed" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Sample raised bed" })).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: "Edit Sample raised bed layout" }));
     expect(screen.getByRole("button", { name: "Plant list" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("heading", { name: "Plants" })).not.toBeInTheDocument();
@@ -44,6 +44,57 @@ describe("GardenWorkspace", () => {
     expect(screen.getAllByRole("button", { name: /· 0\.6 m$/ })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Plant list" }));
     expect(screen.queryByRole("heading", { name: "Plants" })).not.toBeInTheDocument();
+  });
+
+  it("adds, validates, edits, removes, and restores planting records", async () => {
+    const user = userEvent.setup();
+    const firstRender = render(<GardenWorkspace />);
+
+    await user.click(await screen.findByRole("button", { name: "Load demo garden" }));
+    expect(screen.getByRole("heading", { name: "Plantings" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Sample raised bed" })).toHaveLength(2);
+    expect(screen.getByText("Tomatoes")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add planting" }));
+    const form = screen.getByRole("heading", { name: "Add planting" }).closest("form")!;
+
+    fireEvent.submit(form);
+    expect(screen.getByText("Enter a plant name.")).toBeInTheDocument();
+    await user.type(within(form).getByLabelText("Plant name"), "Peppers");
+    fireEvent.submit(form);
+    expect(screen.getByText("Choose a crop family.")).toBeInTheDocument();
+    await user.selectOptions(within(form).getByLabelText("Crop family"), "nightshade");
+    await user.type(within(form).getByLabelText("Quantity"), "1.5");
+    fireEvent.submit(form);
+    expect(screen.getByText("Enter a whole-number quantity of at least 1.")).toBeInTheDocument();
+    await user.clear(within(form).getByLabelText("Quantity"));
+    await user.type(within(form).getByLabelText("Quantity"), "3");
+    fireEvent.submit(form);
+    expect(screen.getByText("Enter a valid planting date.")).toBeInTheDocument();
+    fireEvent.change(within(form).getByLabelText("Planting date"), { target: { value: "2026-05-20" } });
+    await user.selectOptions(within(form).getByLabelText("Growing area"), "");
+    fireEvent.submit(form);
+    expect(screen.getByText("Choose an existing growing area.")).toBeInTheDocument();
+    await user.selectOptions(within(form).getByLabelText("Growing area"), "demo-container-group");
+    await user.click(within(form).getByRole("button", { name: "Add planting" }));
+    expect(screen.getAllByRole("heading", { name: "Sample container group" })).toHaveLength(2);
+    expect(screen.getByText("Peppers")).toBeInTheDocument();
+
+    const containerGroup = screen.getAllByRole("heading", { name: "Sample container group" }).find((heading) => heading.closest(".planting-group"))!.closest("section")!;
+    await user.click(within(containerGroup).getByRole("button", { name: "Edit planting" }));
+    expect(screen.getByRole("heading", { name: "Edit planting" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Quantity"));
+    await user.type(screen.getByLabelText("Quantity"), "5");
+    await user.click(screen.getByLabelText("Active planting"));
+    await user.click(screen.getByRole("button", { name: "Save planting" }));
+    expect(screen.getByText(/Nightshade · 5 · 2026-05-20 · Archived/)).toBeInTheDocument();
+    await waitFor(() => expect(JSON.parse(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY) ?? "{}")).toMatchObject({ version: 3, plantings: expect.arrayContaining([expect.objectContaining({ commonName: "Peppers", quantity: 5, growingAreaId: "demo-container-group", isActive: false })]) }));
+
+    firstRender.unmount();
+    render(<GardenWorkspace />);
+    expect(await screen.findByText(/Nightshade · 5 · 2026-05-20 · Archived/)).toBeInTheDocument();
+    const restoredContainerGroup = screen.getAllByRole("heading", { name: "Sample container group" }).find((heading) => heading.closest(".planting-group"))!.closest("section")!;
+    await user.click(within(restoredContainerGroup).getByRole("button", { name: "Remove" }));
+    expect(screen.queryByText("Peppers")).not.toBeInTheDocument();
   });
 
   it("selects an area on Garden Plan before opening its layout with a double click", async () => {
@@ -195,15 +246,31 @@ describe("GardenWorkspace", () => {
     confirm.mockRestore();
   });
 
-  it("removes an area and asks before starting a new garden", async () => {
+  it("confirms growing-area removal and preserves linked plantings when cancelled", async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<GardenWorkspace />);
 
     await user.click(await screen.findByRole("button", { name: "Load demo garden" }));
     await user.click(screen.getByRole("button", { name: "Remove Sample raised bed" }));
+    expect(confirm).toHaveBeenCalledWith("Remove Sample raised bed and its 1 planting record? This removes them from this browser.");
+    expect(screen.getAllByRole("heading", { name: "Sample raised bed" })).toHaveLength(2);
+    expect(screen.getByText("Tomatoes")).toBeInTheDocument();
+
+    confirm.mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: "Remove Sample raised bed" }));
     expect(screen.queryByRole("heading", { name: "Sample raised bed" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Tomatoes")).not.toBeInTheDocument();
     expect(screen.getByText("2 growing areas", { selector: ".plan-count" })).toBeInTheDocument();
+    confirm.mockRestore();
+  });
+
+  it("asks before starting a new garden", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<GardenWorkspace />);
+
+    await user.click(await screen.findByRole("button", { name: "Load demo garden" }));
 
     await user.click(screen.getByRole("button", { name: "New garden" }));
     expect(confirm).toHaveBeenCalledOnce();
