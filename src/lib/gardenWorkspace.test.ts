@@ -9,7 +9,7 @@ describe("readGardenWorkspace", () => {
       garden: { id: "garden-1", name: "Backyard garden" },
       growingAreas: [{ id: "area-1", name: "North bed", kind: "raised-bed", layout: { widthMeters: 1.2, depthMeters: 0.8, boundary: [{ x: 0, y: 0 }, { x: 1.2, y: 0 }, { x: 1.2, y: 0.8 }, { x: 0, y: 0.8 }], allocations: [{ id: "plant-1", label: "Tomato", x: 0.6, y: 0.4, diameterMeters: 0.5 }] } }]
     }));
-    expect(restored).toMatchObject({ version: 2, garden: { name: "Backyard garden", plan: { widthMeters: 10, depthMeters: 6 } }, growingAreas: [{ planPlacement: { x: 0.5, y: 0.5, rotationDegrees: 0 }, layout: { allocations: [{ label: "Tomato" }] } }] });
+    expect(restored).toMatchObject({ version: 3, garden: { name: "Backyard garden", plan: { widthMeters: 10, depthMeters: 6 } }, growingAreas: [{ planPlacement: { x: 0.5, y: 0.5, rotationDegrees: 0 }, layout: { allocations: [{ label: "Tomato" }] } }], plantings: [] });
 
     expect(readGardenWorkspace(JSON.stringify({
       version: 1,
@@ -17,6 +17,30 @@ describe("readGardenWorkspace", () => {
       growingAreas: []
     }))).toBeUndefined();
     expect(readGardenWorkspace('{bad json')).toBeUndefined();
+  });
+
+  it("migrates version 2 workspaces without losing their plan, layout, or allocations", () => {
+    const restored = readGardenWorkspace(JSON.stringify({
+      version: 2,
+      garden: { id: "garden-1", name: "Backyard garden", plan: { widthMeters: 8, depthMeters: 5 } },
+      growingAreas: [{ id: "area-1", name: "North bed", kind: "raised-bed", planPlacement: { x: 1, y: 2, rotationDegrees: 10 }, layout: { widthMeters: 1.2, depthMeters: 0.8, boundary: [{ x: 0, y: 0 }, { x: 1.2, y: 0 }, { x: 1.2, y: 0.8 }, { x: 0, y: 0.8 }], allocations: [{ id: "plant-1", label: "Tomato", x: 0.6, y: 0.4, diameterMeters: 0.5 }] } }]
+    }));
+
+    expect(restored).toMatchObject({ version: 3, garden: { plan: { widthMeters: 8, depthMeters: 5 } }, growingAreas: [{ planPlacement: { x: 1, y: 2, rotationDegrees: 10 }, layout: { allocations: [{ label: "Tomato" }] } }], plantings: [] });
+  });
+
+  it("accepts valid planting records and rejects invalid planting data", () => {
+    const base = {
+      version: 3,
+      garden: { id: "garden-1", name: "Backyard garden", plan: { widthMeters: 8, depthMeters: 5 } },
+      growingAreas: [{ id: "area-1", name: "North bed", kind: "raised-bed", planPlacement: { x: 1, y: 2, rotationDegrees: 10 } }],
+      plantings: [{ id: "planting-1", commonName: "Tomatoes", cropFamily: "nightshade", quantity: 4, plantingDate: "2026-05-18", growingAreaId: "area-1", isActive: true }]
+    };
+
+    expect(readGardenWorkspace(JSON.stringify(base))).toMatchObject({ plantings: [{ commonName: "Tomatoes", quantity: 4 }] });
+    expect(readGardenWorkspace(JSON.stringify({ ...base, plantings: [{ ...base.plantings[0], quantity: 1.5 }] }))).toBeUndefined();
+    expect(readGardenWorkspace(JSON.stringify({ ...base, plantings: [{ ...base.plantings[0], plantingDate: "2026-02-30" }] }))).toBeUndefined();
+    expect(readGardenWorkspace(JSON.stringify({ ...base, plantings: [{ ...base.plantings[0], growingAreaId: "missing-area" }] }))).toBeUndefined();
   });
 
   it("validates Garden Plan dimensions and grid-snaps placement values", () => {

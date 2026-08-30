@@ -40,7 +40,39 @@ export type PlanPlacement = {
   rotationDegrees: number;
 };
 
+export const plantingCropFamilies = ["nightshade", "brassica", "cucurbit", "legume", "allium", "root", "leafy", "other"] as const;
+
+export type PlantingCropFamily = (typeof plantingCropFamilies)[number];
+
+export type PlantingRecord = {
+  id: string;
+  commonName: string;
+  cropFamily: PlantingCropFamily;
+  quantity: number;
+  plantingDate: string;
+  growingAreaId: string;
+  isActive: boolean;
+};
+
+export const plantingCropFamilyLabels: Record<PlantingCropFamily, string> = {
+  nightshade: "Nightshade",
+  brassica: "Brassica",
+  cucurbit: "Cucurbit",
+  legume: "Legume",
+  allium: "Allium",
+  root: "Root crop",
+  leafy: "Leafy green",
+  other: "Other or unknown"
+};
+
 export type GardenWorkspace = {
+  version: 3;
+  garden: { id: string; name: string; plan: GardenPlan };
+  growingAreas: GrowingArea[];
+  plantings: PlantingRecord[];
+};
+
+type Version2GardenWorkspace = {
   version: 2;
   garden: { id: string; name: string; plan: GardenPlan };
   growingAreas: GrowingArea[];
@@ -62,12 +94,12 @@ export const growingAreaKindLabels: Record<GrowingAreaKind, string> = {
 };
 
 export function createGardenWorkspace(name: string): GardenWorkspace {
-  return { version: 2, garden: { id: createId("garden"), name, plan: DEFAULT_GARDEN_PLAN }, growingAreas: [] };
+  return { version: 3, garden: { id: createId("garden"), name, plan: DEFAULT_GARDEN_PLAN }, growingAreas: [], plantings: [] };
 }
 
 export function createDemoGardenWorkspace(): GardenWorkspace {
   return {
-    version: 2,
+    version: 3,
     garden: { id: "demo-garden", name: "Demo Garden", plan: { widthMeters: 10, depthMeters: 6 } },
     growingAreas: [
       {
@@ -98,6 +130,10 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
         planPlacement: { x: 5.2, y: 0.6, rotationDegrees: 0 },
         layout: createRectangularLayout(1.4, 1.1)
       }
+    ],
+    plantings: [
+      { id: "demo-planting-tomatoes", commonName: "Tomatoes", cropFamily: "nightshade", quantity: 4, plantingDate: "2026-05-18", growingAreaId: "demo-raised-bed", isActive: true },
+      { id: "demo-planting-beans", commonName: "Bush beans", cropFamily: "legume", quantity: 12, plantingDate: "2026-05-24", growingAreaId: "demo-in-ground-area", isActive: true }
     ]
   };
 }
@@ -190,6 +226,7 @@ export function readGardenWorkspace(value: string | null): GardenWorkspace | und
   try {
     const parsed: unknown = JSON.parse(value);
     if (isGardenWorkspace(parsed)) return parsed;
+    if (isVersion2GardenWorkspace(parsed)) return migrateVersion2GardenWorkspace(parsed);
     return isLegacyGardenWorkspace(parsed) ? migrateLegacyGardenWorkspace(parsed) : undefined;
   } catch {
     return undefined;
@@ -199,10 +236,21 @@ export function readGardenWorkspace(value: string | null): GardenWorkspace | und
 function isGardenWorkspace(value: unknown): value is GardenWorkspace {
   if (!value || typeof value !== "object") return false;
   const workspace = value as Partial<GardenWorkspace>;
+  return workspace.version === 3
+    && Boolean(workspace.garden && isNamedRecord(workspace.garden) && isGardenPlan(workspace.garden.plan))
+    && Array.isArray(workspace.growingAreas)
+    && workspace.growingAreas.every(isGrowingArea)
+    && Array.isArray(workspace.plantings)
+    && workspace.plantings.every((planting) => isPlantingRecord(planting) && workspace.growingAreas!.some((area) => area.id === planting.growingAreaId));
+}
+
+function isVersion2GardenWorkspace(value: unknown): value is Version2GardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<Version2GardenWorkspace>;
   return workspace.version === 2
     && Boolean(workspace.garden && isNamedRecord(workspace.garden) && isGardenPlan(workspace.garden.plan))
     && Array.isArray(workspace.growingAreas)
-    && workspace.growingAreas.every((area) => Boolean(area && isNamedRecord(area) && growingAreaKinds.includes(area.kind) && isPlanPlacement(area.planPlacement) && (!area.layout || isGrowingAreaLayout(area.layout))));
+    && workspace.growingAreas.every(isGrowingArea);
 }
 
 function isLegacyGardenWorkspace(value: unknown): value is LegacyGardenWorkspace {
@@ -216,10 +264,21 @@ function isLegacyGardenWorkspace(value: unknown): value is LegacyGardenWorkspace
 
 function migrateLegacyGardenWorkspace(workspace: LegacyGardenWorkspace): GardenWorkspace {
   return {
-    version: 2,
+    version: 3,
     garden: { ...workspace.garden, plan: { ...DEFAULT_GARDEN_PLAN } },
-    growingAreas: workspace.growingAreas.map((area, index) => ({ ...area, planPlacement: defaultPlanPlacement(index) }))
+    growingAreas: workspace.growingAreas.map((area, index) => ({ ...area, planPlacement: defaultPlanPlacement(index) })),
+    plantings: []
   };
+}
+
+function migrateVersion2GardenWorkspace(workspace: Version2GardenWorkspace): GardenWorkspace {
+  return { ...workspace, version: 3, plantings: [] };
+}
+
+function isGrowingArea(value: unknown): value is GrowingArea {
+  if (!value || !isNamedRecord(value)) return false;
+  const area = value as Partial<GrowingArea>;
+  return Boolean(area.kind && growingAreaKinds.includes(area.kind) && isPlanPlacement(area.planPlacement) && (!area.layout || isGrowingAreaLayout(area.layout)));
 }
 
 function isGardenPlan(value: unknown): value is GardenPlan {
@@ -253,6 +312,26 @@ function isAllocation(value: unknown): value is PlantAllocation {
     && typeof (value as PlantAllocation).label === "string" && (value as PlantAllocation).label.trim()
     && Number.isFinite((value as PlantAllocation).x) && Number.isFinite((value as PlantAllocation).y)
     && Number.isFinite((value as PlantAllocation).diameterMeters) && (value as PlantAllocation).diameterMeters > 0);
+}
+
+function isPlantingRecord(value: unknown): value is PlantingRecord {
+  if (!value || typeof value !== "object") return false;
+  const planting = value as Partial<PlantingRecord>;
+  return typeof planting.id === "string" && Boolean(planting.id.trim())
+    && typeof planting.commonName === "string" && Boolean(planting.commonName.trim())
+    && Boolean(planting.cropFamily && plantingCropFamilies.includes(planting.cropFamily))
+    && typeof planting.quantity === "number" && Number.isInteger(planting.quantity) && planting.quantity > 0
+    && typeof planting.plantingDate === "string" && isCalendarDate(planting.plantingDate)
+    && typeof planting.growingAreaId === "string" && Boolean(planting.growingAreaId.trim())
+    && typeof planting.isActive === "boolean";
+}
+
+function isCalendarDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [year, month, day] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function rectangularBoundary(widthMeters: number, depthMeters: number): LayoutPoint[] {
