@@ -1,6 +1,6 @@
 # ADR-0017: Use a Visual Multi-Garden Home and Dedicated Management Workspace
 
-- Status: Accepted
+- Status: Superseded by [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md)
 - Date: 2026-08-30
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md), [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md), [ADR-0015](0015-use-a-metric-garden-plan-overview.md), and [ADR-0016](0016-separate-planting-records-from-layout-allocations.md)
 

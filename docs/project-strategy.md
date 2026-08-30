@@ -198,7 +198,8 @@ Required:
 
 - Create and switch between gardens, then manage named planting areas within
   each garden.
-- Open a visual garden home and arrange planting areas on its measured plan.
+- Open a multi-garden dashboard, browse garden-plan thumbnails, select a
+  garden, and use prominent operations actions for that garden.
 - Use a dedicated management workspace to change garden dimensions, garden
   names, planting-area names, planting-area types, and layouts.
 - Define measured growing-area layouts and place planned plant allocations on a
@@ -213,8 +214,9 @@ Required:
 
 #### Phase 1 Acceptance Scenario
 
-1. Open the built-in garden or create a garden, arrange named planting areas on
-   its plan, and open one area from the overview.
+1. Open the built-in garden or create a garden, browse its garden-plan
+   thumbnail, select it from the dashboard, and open one planting area from
+   Garden Management.
 2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.
 3. Add a plant and record a fertilizing event with type, amount, and date.
