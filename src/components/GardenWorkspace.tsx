@@ -2,8 +2,11 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
+import { GardenPlanOverview } from "@/components/GardenPlanOverview";
 import { GrowingAreaLayoutEditor } from "@/components/GrowingAreaLayoutEditor";
 import {
+  clampPlanPosition,
+  defaultPlanPlacement,
   createDemoGardenWorkspace,
   createGardenWorkspace,
   GARDEN_WORKSPACE_STORAGE_KEY,
@@ -11,8 +14,10 @@ import {
   growingAreaKinds,
   readGardenWorkspace,
   type GardenWorkspace,
+  type GardenPlan,
   type GrowingAreaKind,
-  type GrowingAreaLayout
+  type GrowingAreaLayout,
+  type PlanPlacement
 } from "@/lib/gardenWorkspace";
 
 export function GardenWorkspace() {
@@ -65,10 +70,14 @@ export function GardenWorkspace() {
       setMessage("Enter a growing-area name to continue.");
       return;
     }
-    setWorkspace((current) => current ? {
-      ...current,
-      growingAreas: [...current.growingAreas, { id: createAreaId(), name, kind: areaKind }]
-    } : current);
+    setWorkspace((current) => {
+      if (!current) return current;
+      const placement = defaultPlanPlacement(current.growingAreas.length);
+      return {
+        ...current,
+        growingAreas: [...current.growingAreas, { id: createAreaId(), name, kind: areaKind, planPlacement: { ...placement, ...clampPlanPosition(placement, current.garden.plan) } }]
+      };
+    });
     setAreaName("");
     setAreaKind("raised-bed");
     setIsAreaFormOpen(false);
@@ -87,6 +96,21 @@ export function GardenWorkspace() {
     setWorkspace((current) => current ? {
       ...current,
       growingAreas: current.growingAreas.map((area) => area.id === areaId ? { ...area, layout } : area)
+    } : current);
+  };
+
+  const updatePlan = (plan: GardenPlan) => {
+    setWorkspace((current) => current ? {
+      ...current,
+      garden: { ...current.garden, plan },
+      growingAreas: current.growingAreas.map((area) => ({ ...area, planPlacement: { ...area.planPlacement, ...clampPlanPosition(area.planPlacement, plan) } }))
+    } : current);
+  };
+
+  const updateAreaPlacement = (areaId: string, planPlacement: PlanPlacement) => {
+    setWorkspace((current) => current ? {
+      ...current,
+      growingAreas: current.growingAreas.map((area) => area.id === areaId ? { ...area, planPlacement } : area)
     } : current);
   };
 
@@ -131,14 +155,10 @@ export function GardenWorkspace() {
       <div><p className="product-kicker">Sun-Aware Garden Planner</p><h1>{workspace.garden.name}</h1></div>
       <div className="header-actions"><button className="secondary-button" onClick={loadDemo} type="button">Load demo garden</button><button className="secondary-button" onClick={startOver} type="button">New garden</button></div>
     </header>
-    <div className={editingArea ? "operations-layout operations-layout-editor" : "operations-layout"}>
-      {editingArea ? null : <aside className="operations-sidebar" aria-label="Garden summary">
-        <p className="section-eyebrow">Garden overview</p>
-        <p className="sidebar-count"><strong>{workspace.growingAreas.length}</strong> growing {workspace.growingAreas.length === 1 ? "area" : "areas"}</p>
-        <p className="sidebar-note">Saved in this browser.</p>
-      </aside>}
+    <div className="operations-layout operations-layout-editor">
       <section className="operations-content" aria-labelledby={editingArea ? undefined : "growing-areas-heading"}>
         {editingArea ? <GrowingAreaLayoutEditor area={editingArea} onBack={() => setEditingAreaId(undefined)} onChange={(layout) => updateAreaLayout(editingArea.id, layout)} /> : <>
+          <GardenPlanOverview growingAreas={workspace.growingAreas} onEditLayout={setEditingAreaId} onPlacementChange={updateAreaPlacement} onPlanChange={updatePlan} plan={workspace.garden.plan} />
           <div className="section-header">
           <div><p className="section-eyebrow">Garden setup</p><h2 id="growing-areas-heading">Growing areas</h2></div>
           <button className="primary-button" onClick={() => setIsAreaFormOpen(true)} type="button">Add growing area</button>
@@ -148,7 +168,7 @@ export function GardenWorkspace() {
           <div className="field"><label htmlFor="growing-area-kind">Area type</label><select id="growing-area-kind" onChange={(event) => setAreaKind(event.target.value as GrowingAreaKind)} value={areaKind}>{growingAreaKinds.map((kind) => <option key={kind} value={kind}>{growingAreaKindLabels[kind]}</option>)}</select></div>
           <div className="form-actions"><button className="primary-button" type="submit">Save area</button><button className="secondary-button" onClick={() => setIsAreaFormOpen(false)} type="button">Cancel</button></div>
         </form> : null}
-        {workspace.growingAreas.length > 0 ? <ul className="growing-area-list">{workspace.growingAreas.map((area) => <li className="growing-area-item" key={area.id}><div><h3>{area.name}</h3><p>{growingAreaKindLabels[area.kind]}{area.layout ? ` · ${area.layout.widthMeters} m long × ${area.layout.depthMeters} m wide` : ""}</p></div><div className="area-actions"><button className="text-button" onClick={() => setEditingAreaId(area.id)} type="button">{area.layout ? "Edit layout" : "Set up layout"}</button><button aria-label={`Remove ${area.name}`} className="remove-button" onClick={() => removeGrowingArea(area.id, area.name)} type="button">Remove</button></div></li>)}</ul> : <div className="empty-areas"><h3>No growing areas yet</h3><p>Add the spaces where you grow plants.</p></div>}
+        {workspace.growingAreas.length > 0 ? <ul className="growing-area-list">{workspace.growingAreas.map((area) => <li className="growing-area-item" key={area.id}><div><h3>{area.name}</h3><p>{growingAreaKindLabels[area.kind]}{area.layout ? ` · ${area.layout.widthMeters} m long × ${area.layout.depthMeters} m wide` : ""}</p></div><div className="area-actions"><button aria-label={`${area.layout ? "Edit" : "Set up"} ${area.name} layout`} className="text-button" onClick={() => setEditingAreaId(area.id)} type="button">{area.layout ? "Edit layout" : "Set up layout"}</button><button aria-label={`Remove ${area.name}`} className="remove-button" onClick={() => removeGrowingArea(area.id, area.name)} type="button">Remove</button></div></li>)}</ul> : <div className="empty-areas"><h3>No growing areas yet</h3><p>Add the spaces where you grow plants.</p></div>}
         <p aria-live="polite" className="workspace-message" role="status">{message}</p>
         </>}
       </section>

@@ -402,24 +402,6 @@ select {
   display: block;
 }
 
-.operations-sidebar {
-  padding-top: 8px;
-}
-
-.sidebar-count {
-  margin: 0;
-  color: #33483a;
-  font-size: 15px;
-}
-
-.sidebar-count strong {
-  display: block;
-  color: #183a2a;
-  font-size: 38px;
-  font-weight: 700;
-  line-height: 1;
-}
-
 .sidebar-note {
   margin: 18px 0 0;
   color: #657268;
@@ -433,6 +415,109 @@ select {
   gap: 24px;
   border-bottom: 1px solid #cfd7ce;
   padding-bottom: 18px;
+}
+
+.garden-plan {
+  min-width: 0;
+}
+
+.plan-count {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.plan-intro {
+  margin: 16px 0;
+  color: #657268;
+}
+
+.plan-dimensions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  border-bottom: 1px solid #d7ddd6;
+  padding-bottom: 20px;
+}
+
+.plan-dimensions .field {
+  margin: 0;
+}
+
+.plan-dimensions input {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.garden-plan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 0.75fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+.plan-canvas-wrap {
+  overflow: auto;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.plan-controls {
+  border-left: 1px solid #d7ddd6;
+  padding-left: 24px;
+}
+
+.plan-controls h3 {
+  margin: 0 0 12px;
+  color: #183a2a;
+  font-size: 16px;
+}
+
+.plan-area-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-area-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-area-select {
+  flex: 1;
+  border: 1px solid #cfd7ce;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: #183a2a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.plan-area-select[aria-pressed="true"] {
+  border-color: #397a5a;
+  background: #edf5ec;
+}
+
+.selected-plan-area {
+  margin-top: 24px;
+  border-top: 1px solid #d7ddd6;
+  padding-top: 20px;
+}
+
+.selected-plan-area .secondary-button {
+  margin-top: 16px;
 }
 
 .area-form {
@@ -640,6 +725,7 @@ select {
   .section-header,
   .inline-form-row,
   .area-form,
+  .plan-dimensions,
   .layout-dimensions {
     align-items: stretch;
     grid-template-columns: 1fr;
@@ -656,14 +742,6 @@ select {
     padding-top: 28px;
   }
 
-  .operations-sidebar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    border-bottom: 1px solid #cfd7ce;
-    padding-bottom: 18px;
-  }
-
   .sidebar-note {
     margin: 0;
   }
@@ -672,7 +750,17 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .garden-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
   .allocation-controls {
+    border-top: 1px solid #d7ddd6;
+    border-left: 0;
+    padding: 24px 0 0;
+  }
+
+  .plan-controls {
     border-top: 1px solid #d7ddd6;
     border-left: 0;
     padding: 24px 0 0;

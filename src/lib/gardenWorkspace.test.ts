@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { clampAllocationCenter, createRectangularLayout, findDuplicatePlantPosition, readGardenWorkspace, snapToGrid, validateLayoutDimensions } from "@/lib/gardenWorkspace";
+import { clampAllocationCenter, clampPlanPosition, createRectangularLayout, defaultPlanPlacement, findDuplicatePlantPosition, normalizePlanRotation, readGardenWorkspace, snapToGrid, validateGardenPlanDimensions, validateLayoutDimensions } from "@/lib/gardenWorkspace";
 
 describe("readGardenWorkspace", () => {
-  it("returns only complete, supported workspace data", () => {
-    expect(readGardenWorkspace(JSON.stringify({
+  it("migrates saved version 1 workspaces without losing layouts or plant allocations", () => {
+    const restored = readGardenWorkspace(JSON.stringify({
       version: 1,
       garden: { id: "garden-1", name: "Backyard garden" },
-      growingAreas: [{ id: "area-1", name: "North bed", kind: "raised-bed" }]
-    }))).toMatchObject({ garden: { name: "Backyard garden" } });
+      growingAreas: [{ id: "area-1", name: "North bed", kind: "raised-bed", layout: { widthMeters: 1.2, depthMeters: 0.8, boundary: [{ x: 0, y: 0 }, { x: 1.2, y: 0 }, { x: 1.2, y: 0.8 }, { x: 0, y: 0.8 }], allocations: [{ id: "plant-1", label: "Tomato", x: 0.6, y: 0.4, diameterMeters: 0.5 }] } }]
+    }));
+    expect(restored).toMatchObject({ version: 2, garden: { name: "Backyard garden", plan: { widthMeters: 10, depthMeters: 6 } }, growingAreas: [{ planPlacement: { x: 0.5, y: 0.5, rotationDegrees: 0 }, layout: { allocations: [{ label: "Tomato" }] } }] });
 
     expect(readGardenWorkspace(JSON.stringify({
       version: 1,
@@ -16,6 +17,16 @@ describe("readGardenWorkspace", () => {
       growingAreas: []
     }))).toBeUndefined();
     expect(readGardenWorkspace('{bad json')).toBeUndefined();
+  });
+
+  it("validates Garden Plan dimensions and grid-snaps placement values", () => {
+    const plan = { widthMeters: 3, depthMeters: 2 };
+
+    expect(validateGardenPlanDimensions(3, 2)).toBe(true);
+    expect(validateGardenPlanDimensions(0, 2)).toBe(false);
+    expect(clampPlanPosition({ x: 3.08, y: -0.03 }, plan)).toEqual({ x: 3, y: 0 });
+    expect(defaultPlanPlacement(4)).toEqual({ x: 3.5, y: 2.5, rotationDegrees: 0 });
+    expect(normalizePlanRotation(-10.2)).toBe(349.8);
   });
 
   it("validates metric dimensions and snaps allocation centres inside a layout", () => {

@@ -8,6 +8,7 @@ export type GrowingArea = {
   id: string;
   name: string;
   kind: GrowingAreaKind;
+  planPlacement: PlanPlacement;
   layout?: GrowingAreaLayout;
 };
 
@@ -28,11 +29,30 @@ export type GrowingAreaLayout = {
   allocations: PlantAllocation[];
 };
 
+export type GardenPlan = {
+  widthMeters: number;
+  depthMeters: number;
+};
+
+export type PlanPlacement = {
+  x: number;
+  y: number;
+  rotationDegrees: number;
+};
+
 export type GardenWorkspace = {
-  version: 1;
-  garden: { id: string; name: string };
+  version: 2;
+  garden: { id: string; name: string; plan: GardenPlan };
   growingAreas: GrowingArea[];
 };
+
+type LegacyGardenWorkspace = {
+  version: 1;
+  garden: { id: string; name: string };
+  growingAreas: Omit<GrowingArea, "planPlacement">[];
+};
+
+export const DEFAULT_GARDEN_PLAN: GardenPlan = { widthMeters: 10, depthMeters: 6 };
 
 export const growingAreaKindLabels: Record<GrowingAreaKind, string> = {
   "raised-bed": "Raised bed",
@@ -42,18 +62,19 @@ export const growingAreaKindLabels: Record<GrowingAreaKind, string> = {
 };
 
 export function createGardenWorkspace(name: string): GardenWorkspace {
-  return { version: 1, garden: { id: createId("garden"), name }, growingAreas: [] };
+  return { version: 2, garden: { id: createId("garden"), name, plan: DEFAULT_GARDEN_PLAN }, growingAreas: [] };
 }
 
 export function createDemoGardenWorkspace(): GardenWorkspace {
   return {
-    version: 1,
-    garden: { id: "demo-garden", name: "Demo Garden" },
+    version: 2,
+    garden: { id: "demo-garden", name: "Demo Garden", plan: { widthMeters: 10, depthMeters: 6 } },
     growingAreas: [
       {
         id: "demo-raised-bed",
         name: "Sample raised bed",
         kind: "raised-bed",
+        planPlacement: { x: 0.8, y: 1, rotationDegrees: 0 },
         layout: {
           widthMeters: 3,
           depthMeters: 1.2,
@@ -62,6 +83,20 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
             { id: "demo-tomato", label: "Tomato", x: 0.6, y: 0.6, diameterMeters: 0.6 }
           ]
         }
+      },
+      {
+        id: "demo-in-ground-area",
+        name: "Sample in-ground area",
+        kind: "in-ground",
+        planPlacement: { x: 4.7, y: 2.6, rotationDegrees: 10 },
+        layout: createRectangularLayout(3.8, 1.8)
+      },
+      {
+        id: "demo-container-group",
+        name: "Sample container group",
+        kind: "container",
+        planPlacement: { x: 5.2, y: 0.6, rotationDegrees: 0 },
+        layout: createRectangularLayout(1.4, 1.1)
       }
     ]
   };
@@ -75,8 +110,27 @@ export function validateLayoutDimensions(widthMeters: number, depthMeters: numbe
   return Number.isFinite(widthMeters) && Number.isFinite(depthMeters) && widthMeters >= 0.1 && depthMeters >= 0.1;
 }
 
+export function validateGardenPlanDimensions(widthMeters: number, depthMeters: number) {
+  return validateLayoutDimensions(widthMeters, depthMeters);
+}
+
 export function snapToGrid(value: number) {
   return Math.round(value * 10) / 10;
+}
+
+export function clampPlanPosition(point: LayoutPoint, plan: GardenPlan): LayoutPoint {
+  return {
+    x: snapToGrid(Math.min(Math.max(point.x, 0), plan.widthMeters)),
+    y: snapToGrid(Math.min(Math.max(point.y, 0), plan.depthMeters))
+  };
+}
+
+export function normalizePlanRotation(value: number) {
+  return snapToGrid(((value % 360) + 360) % 360);
+}
+
+export function defaultPlanPlacement(index: number): PlanPlacement {
+  return { x: snapToGrid(0.5 + (index % 3) * 3), y: snapToGrid(0.5 + Math.floor(index / 3) * 2), rotationDegrees: 0 };
 }
 
 export function clampAllocationCenter(point: LayoutPoint, layout: Pick<GrowingAreaLayout, "widthMeters" | "depthMeters">): LayoutPoint {
@@ -135,7 +189,8 @@ export function readGardenWorkspace(value: string | null): GardenWorkspace | und
 
   try {
     const parsed: unknown = JSON.parse(value);
-    return isGardenWorkspace(parsed) ? parsed : undefined;
+    if (isGardenWorkspace(parsed)) return parsed;
+    return isLegacyGardenWorkspace(parsed) ? migrateLegacyGardenWorkspace(parsed) : undefined;
   } catch {
     return undefined;
   }
@@ -144,10 +199,40 @@ export function readGardenWorkspace(value: string | null): GardenWorkspace | und
 function isGardenWorkspace(value: unknown): value is GardenWorkspace {
   if (!value || typeof value !== "object") return false;
   const workspace = value as Partial<GardenWorkspace>;
+  return workspace.version === 2
+    && Boolean(workspace.garden && isNamedRecord(workspace.garden) && isGardenPlan(workspace.garden.plan))
+    && Array.isArray(workspace.growingAreas)
+    && workspace.growingAreas.every((area) => Boolean(area && isNamedRecord(area) && growingAreaKinds.includes(area.kind) && isPlanPlacement(area.planPlacement) && (!area.layout || isGrowingAreaLayout(area.layout))));
+}
+
+function isLegacyGardenWorkspace(value: unknown): value is LegacyGardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<LegacyGardenWorkspace>;
   return workspace.version === 1
     && Boolean(workspace.garden && isNamedRecord(workspace.garden))
     && Array.isArray(workspace.growingAreas)
     && workspace.growingAreas.every((area) => Boolean(area && isNamedRecord(area) && growingAreaKinds.includes(area.kind) && (!area.layout || isGrowingAreaLayout(area.layout))));
+}
+
+function migrateLegacyGardenWorkspace(workspace: LegacyGardenWorkspace): GardenWorkspace {
+  return {
+    version: 2,
+    garden: { ...workspace.garden, plan: { ...DEFAULT_GARDEN_PLAN } },
+    growingAreas: workspace.growingAreas.map((area, index) => ({ ...area, planPlacement: defaultPlanPlacement(index) }))
+  };
+}
+
+function isGardenPlan(value: unknown): value is GardenPlan {
+  if (!value || typeof value !== "object") return false;
+  const plan = value as GardenPlan;
+  return validateGardenPlanDimensions(plan.widthMeters, plan.depthMeters);
+}
+
+function isPlanPlacement(value: unknown): value is PlanPlacement {
+  return Boolean(value && typeof value === "object"
+    && Number.isFinite((value as PlanPlacement).x) && (value as PlanPlacement).x >= 0
+    && Number.isFinite((value as PlanPlacement).y) && (value as PlanPlacement).y >= 0
+    && Number.isFinite((value as PlanPlacement).rotationDegrees));
 }
 
 function isGrowingAreaLayout(value: unknown): value is GrowingAreaLayout {

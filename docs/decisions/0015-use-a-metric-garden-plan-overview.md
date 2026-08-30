@@ -27,10 +27,12 @@ Use a user-arranged, metre-based Garden Plan as the primary home-screen view.
   coordinate system.
 - The overview renders each area's measured boundary at relative scale,
   including rectangles and future polygon-based in-ground areas.
-- Users can drag areas with 0.1 metre grid snapping and retain precise numeric
-  controls for position and rotation.
-- Selecting an area opens its plant layout and operational details. The home
-  screen also shows a compact upcoming-care summary.
+- A click or tap selects an area and exposes precise numeric controls for its
+  position and rotation. Dragging uses 0.1 metre grid snapping. A double click,
+  double tap, or Edit layout action opens the growing area's layout editor.
+- Garden Plan changes only a growing area's position and rotation. Area
+  dimensions, boundary, and plant allocations remain in the growing-area
+  layout editor. The home screen also shows a compact upcoming-care summary.
 - The plan represents the user's managed growing spaces. It does not claim a
   surveyed property boundary or a map-aligned yard model.
 - The browser-persisted prototype owns this state until the backend and
@@ -80,7 +82,7 @@ workflow for a later assistant.
 - The home screen becomes a visual operations dashboard with an upcoming-care
   summary.
 - Focused tests must cover placement snapping, persistence, selection, and
-  navigation into a growing area's layout.
+  explicit navigation into a growing area's layout.
 - The first slice allows users to arrange areas freely. Overlap warnings,
   nested zones, surveyed boundaries, and map alignment remain later work.
 - Backend schema design must preserve metric units, plan coordinates, local

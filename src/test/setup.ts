@@ -4,8 +4,8 @@ import { afterEach, vi } from "vitest";
 
 vi.mock("react-konva", async () => {
   const React = await import("react");
-  const Node = ({ children, text, onDblClick, onDblTap: _onDblTap, onDragEnd, onTap: _onTap, listening: _listening, closed: _closed, ...props }: { children?: React.ReactNode; text?: string; onDblClick?: React.MouseEventHandler<HTMLDivElement>; onDblTap?: unknown; onDragEnd?: React.PointerEventHandler<HTMLDivElement>; onTap?: unknown; listening?: boolean; closed?: boolean; [key: string]: unknown }) =>
-    React.createElement("div", { ...props, onDoubleClick: onDblClick, onPointerUp: onDragEnd }, children ?? text);
+  const Node = ({ children, text, onClick, onDblClick, onDblTap, onDragEnd, onTap, listening: _listening, closed: _closed, ...props }: { children?: React.ReactNode; text?: string; onClick?: React.MouseEventHandler<HTMLDivElement>; onDblClick?: React.MouseEventHandler<HTMLDivElement>; onDblTap?: React.MouseEventHandler<HTMLDivElement>; onDragEnd?: React.PointerEventHandler<HTMLDivElement>; onTap?: React.MouseEventHandler<HTMLDivElement>; listening?: boolean; closed?: boolean; [key: string]: unknown }) =>
+    React.createElement("div", { ...props, onClick: onClick ?? onTap, onDoubleClick: onDblClick ?? onDblTap, onPointerUp: onDragEnd }, children ?? text);
   return { Stage: Node, Layer: Node, Line: Node, Rect: Node, Circle: Node, Group: Node, Text: Node };
 });
 
