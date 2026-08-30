@@ -4,8 +4,8 @@ import { afterEach, vi } from "vitest";
 
 vi.mock("react-konva", async () => {
   const React = await import("react");
-  const Node = ({ children, text, onDragEnd, listening: _listening, closed: _closed, ...props }: { children?: React.ReactNode; text?: string; onDragEnd?: React.PointerEventHandler<HTMLDivElement>; listening?: boolean; closed?: boolean; [key: string]: unknown }) =>
-    React.createElement("div", { ...props, onPointerUp: onDragEnd }, children ?? text);
+  const Node = ({ children, text, onDblClick, onDblTap: _onDblTap, onDragEnd, onTap: _onTap, listening: _listening, closed: _closed, ...props }: { children?: React.ReactNode; text?: string; onDblClick?: React.MouseEventHandler<HTMLDivElement>; onDblTap?: unknown; onDragEnd?: React.PointerEventHandler<HTMLDivElement>; onTap?: unknown; listening?: boolean; closed?: boolean; [key: string]: unknown }) =>
+    React.createElement("div", { ...props, onDoubleClick: onDblClick, onPointerUp: onDragEnd }, children ?? text);
   return { Stage: Node, Layer: Node, Line: Node, Rect: Node, Circle: Node, Group: Node, Text: Node };
 });
 
