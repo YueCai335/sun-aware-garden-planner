@@ -138,7 +138,7 @@ export function GrowingAreaLayoutEditor({ area, onBack, onChange }: GrowingAreaL
   };
 
   return <section className="layout-editor" aria-labelledby="layout-editor-heading">
-    <div className="section-header"><div><p className="section-eyebrow">Planting layout</p><h2 id="layout-editor-heading">{area.name}</h2></div><button className="secondary-button" onClick={onBack} type="button">Back to growing areas</button></div>
+    <div className="section-header"><div><p className="section-eyebrow">Planting layout</p><h2 id="layout-editor-heading">{area.name}</h2></div><button className="secondary-button" onClick={onBack} type="button">Back to planting areas</button></div>
     <p className="layout-intro">Plan individual plants on a measured length and width grid.</p>
     <form className="layout-dimensions" onSubmit={saveDimensions}>
       <div className="field"><label htmlFor="layout-length">Length (m)</label><input id="layout-length" min="0.1" onChange={(event) => setWidth(event.target.value)} step="0.1" type="number" value={width} /></div>
