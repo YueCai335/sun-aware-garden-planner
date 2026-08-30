@@ -58,6 +58,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) | Prioritize garden operations and AI planning | Accepted |
 | [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md) | Use metric planting layouts with grid snapping | Accepted |
 | [ADR-0015](0015-use-a-metric-garden-plan-overview.md) | Use a metric garden plan overview | Accepted |
+| [ADR-0016](0016-separate-planting-records-from-layout-allocations.md) | Separate planting records from layout allocations | Accepted |
 
 ## Interview Use
 

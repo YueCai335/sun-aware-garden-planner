@@ -305,8 +305,8 @@ Until then, resume bullets should describe only completed functionality.
 
 Build the Garden Operations MVP in focused slices:
 
-1. Deliver a garden-plan overview with metric growing-area placement and
-   browser persistence.
+1. Deliver planting records with crop family, quantity, planting date, and a
+   growing-area link.
 2. Deliver the garden dashboard and journal workflow.
 3. Add task completion and date-based views.
 4. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
@@ -317,4 +317,5 @@ Build the Garden Operations MVP in focused slices:
 The current priority is recorded in
 [ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md),
 [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md),
-and [ADR-0015](decisions/0015-use-a-metric-garden-plan-overview.md).
+[ADR-0015](decisions/0015-use-a-metric-garden-plan-overview.md), and
+[ADR-0016](decisions/0016-separate-planting-records-from-layout-allocations.md).
