@@ -309,7 +309,25 @@ select {
 .header-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px;
+}
+
+.garden-switcher {
+  display: grid;
+  gap: 5px;
+  color: #374034;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.garden-switcher select {
+  min-height: 38px;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: #1d2920;
 }
 
 .operations-header h1,
@@ -400,6 +418,49 @@ select {
 
 .operations-layout-editor {
   display: block;
+}
+
+.operations-content {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 42px 0 80px;
+}
+
+.management-content {
+  display: grid;
+  gap: 42px;
+}
+
+.management-content .plantings-section {
+  margin: 0;
+}
+
+.record-location-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 26px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 18px 20px;
+  background: #ffffff;
+}
+
+.record-location-note h2,
+.record-location-note p {
+  margin: 0;
+}
+
+.record-location-note h2 {
+  color: #183a2a;
+  font-size: 17px;
+}
+
+.record-location-note p {
+  flex: 1;
+  color: #657268;
+  font-size: 14px;
 }
 
 .sidebar-note {
@@ -803,6 +864,7 @@ select {
 @media (max-width: 720px) {
   .operations-header,
   .operations-layout,
+  .operations-content,
   .garden-onboarding {
     width: min(100% - 32px, 1180px);
   }
@@ -817,13 +879,15 @@ select {
   .area-form,
   .planting-form,
   .plan-dimensions,
-  .layout-dimensions {
+  .layout-dimensions,
+  .record-location-note {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
   .operations-header-active,
-  .section-header {
+  .section-header,
+  .record-location-note {
     display: grid;
   }
 
