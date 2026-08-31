@@ -62,7 +62,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v3))).toEqual({
-      version: 4,
+      version: 5,
       selectedGardenId: "garden-1",
       gardens: [
         {
@@ -71,6 +71,7 @@ describe("readGardenWorkspace", () => {
           plan: { widthMeters: 8, depthMeters: 5 },
           growingAreas: v3.growingAreas,
           plantings: v3.plantings,
+          careEvents: [],
         },
       ],
     });
@@ -78,7 +79,7 @@ describe("readGardenWorkspace", () => {
 
   it("keeps independent gardens and rejects a record linked outside its garden", () => {
     const valid = {
-      version: 4,
+      version: 5,
       selectedGardenId: "home",
       gardens: [
         {
@@ -94,6 +95,7 @@ describe("readGardenWorkspace", () => {
             },
           ],
           plantings: [],
+          careEvents: [],
         },
         {
           id: "community",
@@ -107,6 +109,7 @@ describe("readGardenWorkspace", () => {
               planPlacement: { x: 0, y: 0, rotationDegrees: 0 },
             },
           ],
+          careEvents: [],
           plantings: [
             {
               id: "planting-1",
@@ -139,6 +142,52 @@ describe("readGardenWorkspace", () => {
         }),
       ),
     ).toBeUndefined();
+    expect(
+      readGardenWorkspace(
+        JSON.stringify({
+          ...valid,
+          gardens: [
+            {
+              ...valid.gardens[0],
+              careEvents: [
+                {
+                  id: "care-1",
+                  type: "watering",
+                  date: "2026-06-01",
+                  note: "",
+                  targetScope: "planting-area",
+                  growingAreaId: "community-bed",
+                  growingAreaName: "Plot bed",
+                },
+              ],
+            },
+            valid.gardens[1],
+          ],
+        }),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("migrates v4 gardens without changing their existing contents", () => {
+    const v4 = {
+      version: 4,
+      selectedGardenId: "garden-1",
+      gardens: [
+        {
+          id: "garden-1",
+          name: "Home garden",
+          plan: { widthMeters: 8, depthMeters: 5 },
+          growingAreas: [],
+          plantings: [],
+        },
+      ],
+    };
+
+    expect(readGardenWorkspace(JSON.stringify(v4))).toEqual({
+      version: 5,
+      selectedGardenId: "garden-1",
+      gardens: [{ ...v4.gardens[0], careEvents: [] }],
+    });
   });
 
   it("migrates v1 and v2 workspaces with measured layouts", () => {
@@ -189,7 +238,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v1))).toMatchObject({
-      version: 4,
+      version: 5,
       gardens: [
         {
           plan: { widthMeters: 10, depthMeters: 6 },
@@ -203,7 +252,7 @@ describe("readGardenWorkspace", () => {
       ],
     });
     expect(readGardenWorkspace(JSON.stringify(v2))).toMatchObject({
-      version: 4,
+      version: 5,
       selectedGardenId: "garden-2",
       gardens: [
         {

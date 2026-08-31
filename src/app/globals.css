@@ -519,6 +519,64 @@ select {
   gap: 10px;
 }
 
+.care-summary {
+  display: grid;
+  gap: 18px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.care-summary h2 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 20px;
+}
+
+.care-summary-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.care-summary-list li {
+  display: grid;
+  grid-template-columns: auto 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-left: 3px solid #d7ead9;
+  padding: 8px 0 8px 12px;
+  color: #657268;
+  font-size: 14px;
+}
+
+.care-event-type {
+  width: max-content;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.care-event-type-watering {
+  background: #dbeef4;
+  color: #195b70;
+}
+
+.care-event-type-fertilizing {
+  background: #f7e7bf;
+  color: #805b17;
+}
+
+.section-context {
+  margin: 6px 0 0;
+  color: #657268;
+  font-size: 14px;
+}
+
 .sidebar-note {
   margin: 18px 0 0;
   color: #657268;
@@ -661,6 +719,66 @@ select {
   gap: 14px;
   border-bottom: 1px solid #d7ddd6;
   padding: 22px 0;
+}
+
+.care-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  border-bottom: 1px solid #d7ddd6;
+  padding: 22px 0;
+}
+
+.care-form h3,
+.care-log h3 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 16px;
+}
+
+.care-form h3,
+.care-note-field {
+  grid-column: 1 / -1;
+}
+
+.care-form .field {
+  margin: 0;
+}
+
+.care-form input,
+.care-form select {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.care-event-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.care-event-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.care-event-list p {
+  margin: 5px 0 0;
+  color: #657268;
+  font-size: 14px;
 }
 
 .planting-form h3,
@@ -934,6 +1052,7 @@ select {
   .inline-form-row,
   .area-form,
   .planting-form,
+  .care-form,
   .plan-dimensions,
   .layout-dimensions,
   .selected-garden-actions {

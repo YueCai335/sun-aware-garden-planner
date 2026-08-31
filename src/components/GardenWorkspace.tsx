@@ -17,6 +17,9 @@ import {
   plantingCropFamilyLabels,
   readGardenWorkspace,
   type Garden,
+  type CareEvent,
+  type CareEventTargetScope,
+  type CareEventType,
   type GardenPlan,
   type GardenWorkspace,
   type GrowingArea,
@@ -30,8 +33,9 @@ import {
 export function GardenWorkspace() {
   const [workspace, setWorkspace] = useState<GardenWorkspace>();
   const [isManagement, setIsManagement] = useState(false);
+  const [isCareLog, setIsCareLog] = useState(false);
   const [managementFocus, setManagementFocus] = useState<
-    "garden-management" | "planting-records"
+    "garden-management" | "planting-records" | "care-log"
   >();
   const [newGardenName, setNewGardenName] = useState("");
   const [renameGardenName, setRenameGardenName] = useState("");
@@ -45,28 +49,41 @@ export function GardenWorkspace() {
   const [editingPlantingId, setEditingPlantingId] = useState<string>();
   const [plantingForm, setPlantingForm] =
     useState<PlantingForm>(emptyPlantingForm());
+  const [isCareFormOpen, setIsCareFormOpen] = useState(false);
+  const [editingCareEventId, setEditingCareEventId] = useState<string>();
+  const [careForm, setCareForm] = useState<CareForm>(emptyCareForm());
   const [isLoaded, setIsLoaded] = useState(false);
   const [message, setMessage] = useState("");
   const gardenManagementHeadingRef = useRef<HTMLHeadingElement>(null);
   const plantingRecordsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const careLogHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    const restored = readGardenWorkspace(
-      window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY),
-    );
-    if (restored) {
-      setWorkspace(restored);
-      setMessage("Gardens restored from this browser.");
+    try {
+      const saved = window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY);
+      const restored = readGardenWorkspace(saved);
+      if (restored) {
+        setWorkspace(restored);
+        setMessage("Gardens restored from this browser.");
+      } else if (saved) {
+        setMessage("Saved garden data could not be loaded.");
+      }
+    } catch {
+      setMessage("This browser's garden storage is unavailable.");
     }
     setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (isLoaded && workspace)
+    if (!isLoaded || !workspace) return;
+    try {
       window.localStorage.setItem(
         GARDEN_WORKSPACE_STORAGE_KEY,
         JSON.stringify(workspace),
       );
+    } catch {
+      setMessage("Changes could not be saved in this browser.");
+    }
   }, [isLoaded, workspace]);
 
   const garden = workspace?.gardens.find(
@@ -81,13 +98,15 @@ export function GardenWorkspace() {
   }, [garden?.id]);
 
   useEffect(() => {
-    if (!isManagement || editingArea) return;
+    if ((!isManagement && !isCareLog) || editingArea) return;
     const heading =
       managementFocus === "planting-records"
         ? plantingRecordsHeadingRef.current
+        : managementFocus === "care-log"
+          ? careLogHeadingRef.current
         : gardenManagementHeadingRef.current;
     heading?.focus();
-  }, [editingArea, isManagement, managementFocus, garden?.id]);
+  }, [editingArea, isCareLog, isManagement, managementFocus, garden?.id]);
 
   const updateGarden = (update: (current: Garden) => Garden) => {
     setWorkspace((current) =>
@@ -112,6 +131,8 @@ export function GardenWorkspace() {
     setIsAreaFormOpen(false);
     setIsPlantingFormOpen(false);
     setEditingPlantingId(undefined);
+    setIsCareFormOpen(false);
+    setEditingCareEventId(undefined);
   };
 
   const selectGarden = (gardenId: string) => {
@@ -130,12 +151,21 @@ export function GardenWorkspace() {
   ) => {
     setManagementFocus(target);
     setIsManagement(true);
+    setIsCareLog(false);
     setRenameGardenName(garden?.name ?? "");
+    clearTransientState();
+  };
+
+  const openCareLog = () => {
+    setManagementFocus("care-log");
+    setIsManagement(false);
+    setIsCareLog(true);
     clearTransientState();
   };
 
   const returnToDashboard = () => {
     setIsManagement(false);
+    setIsCareLog(false);
     setManagementFocus(undefined);
     clearTransientState();
   };
@@ -200,7 +230,7 @@ export function GardenWorkspace() {
       return;
     }
 
-    setWorkspace({ version: 4, selectedGardenId: gardens[0].id, gardens });
+    setWorkspace({ version: 5, selectedGardenId: gardens[0].id, gardens });
     setRenameGardenName(gardens[0].name);
     clearTransientState();
     setMessage(`${garden.name} deleted.`);
@@ -277,7 +307,7 @@ export function GardenWorkspace() {
     );
     if (
       !window.confirm(
-        `Delete ${area.name}? This removes the planting area and its ${linkedPlantings.length} planting record${linkedPlantings.length === 1 ? "" : "s"} from this browser.`,
+        `Delete ${area.name}? This removes the planting area and its ${linkedPlantings.length} planting record${linkedPlantings.length === 1 ? "" : "s"} from this browser. Care history stays in this garden.`,
       )
     )
       return;
@@ -288,6 +318,11 @@ export function GardenWorkspace() {
       ),
       plantings: current.plantings.filter(
         (planting) => planting.growingAreaId !== area.id,
+      ),
+      careEvents: current.careEvents.map((event) =>
+        event.growingAreaId === area.id
+          ? { ...event, targetAreaDeleted: true }
+          : event,
       ),
     }));
     setMessage(`${area.name} deleted.`);
@@ -404,6 +439,100 @@ export function GardenWorkspace() {
     setMessage(`${planting.commonName} removed.`);
   };
 
+  const openAddCare = () => {
+    setCareForm(emptyCareForm());
+    setEditingCareEventId(undefined);
+    setIsCareFormOpen(true);
+  };
+
+  const openEditCare = (event: CareEvent) => {
+    setCareForm({
+      type: event.type,
+      date: event.date,
+      note: event.note,
+      targetScope: event.targetScope,
+      growingAreaId: event.growingAreaId ?? "",
+      fertilizerProduct: event.fertilizerProduct ?? "",
+      fertilizerAmount: event.fertilizerAmount ? String(event.fertilizerAmount) : "",
+      fertilizerUnit: event.fertilizerUnit ?? "",
+    });
+    setEditingCareEventId(event.id);
+    setIsCareFormOpen(true);
+  };
+
+  const saveCare = (formEvent: FormEvent<HTMLFormElement>) => {
+    formEvent.preventDefault();
+    if (!garden) return;
+    if (!isCalendarDate(careForm.date))
+      return setMessage("Enter a valid care date.");
+    const previous = garden.careEvents.find(
+      (event) => event.id === editingCareEventId,
+    );
+    const area = garden.growingAreas.find(
+      (candidate) => candidate.id === careForm.growingAreaId,
+    );
+    if (
+      careForm.targetScope === "planting-area" &&
+      !area &&
+      !(previous?.targetScope === "planting-area" &&
+        previous.growingAreaId === careForm.growingAreaId)
+    )
+      return setMessage("Choose an existing planting area.");
+
+    const fertilizerProduct = careForm.fertilizerProduct.trim();
+    const fertilizerUnit = careForm.fertilizerUnit.trim();
+    const hasFertilizerAmount = Boolean(careForm.fertilizerAmount.trim());
+    const fertilizerAmount = Number(careForm.fertilizerAmount);
+    if (
+      careForm.type === "fertilizing" &&
+      hasFertilizerAmount &&
+      (!Number.isFinite(fertilizerAmount) || fertilizerAmount <= 0)
+    )
+      return setMessage("Enter a fertilizer amount greater than zero.");
+
+    const event: CareEvent = {
+      id: editingCareEventId ?? createId("care"),
+      type: careForm.type,
+      date: careForm.date,
+      note: careForm.note.trim(),
+      targetScope: careForm.targetScope,
+      ...(careForm.targetScope === "planting-area"
+        ? {
+            growingAreaId: careForm.growingAreaId,
+            growingAreaName: area?.name ?? previous?.growingAreaName,
+            ...(area ? {} : { targetAreaDeleted: true }),
+          }
+        : {}),
+      ...(careForm.type === "fertilizing"
+        ? {
+            ...(fertilizerProduct ? { fertilizerProduct } : {}),
+            ...(hasFertilizerAmount ? { fertilizerAmount } : {}),
+            ...(fertilizerUnit ? { fertilizerUnit } : {}),
+          }
+        : {}),
+    };
+    const action = editingCareEventId ? "updated" : "added";
+    updateGarden((current) => ({
+      ...current,
+      careEvents: editingCareEventId
+        ? current.careEvents.map((item) =>
+            item.id === editingCareEventId ? event : item,
+          )
+        : [...current.careEvents, event],
+    }));
+    setIsCareFormOpen(false);
+    setEditingCareEventId(undefined);
+    setMessage(`${careForm.type === "watering" ? "Watering" : "Fertilizing"} event ${action}.`);
+  };
+
+  const removeCare = (event: CareEvent) => {
+    updateGarden((current) => ({
+      ...current,
+      careEvents: current.careEvents.filter((item) => item.id !== event.id),
+    }));
+    setMessage("Care event removed.");
+  };
+
   if (!isLoaded)
     return (
       <main className="operations-shell">
@@ -429,7 +558,7 @@ export function GardenWorkspace() {
           <h1>{garden.name}</h1>
         </div>
         <div className="header-actions">
-          {isManagement ? (
+          {isManagement || isCareLog ? (
             <button
               className="secondary-button"
               onClick={returnToDashboard}
@@ -440,14 +569,35 @@ export function GardenWorkspace() {
           ) : null}
         </div>
       </header>
-      {!isManagement ? (
+      {!isManagement && !isCareLog ? (
         <Home
           garden={garden}
           gardens={workspace.gardens}
+          onCareLog={openCareLog}
           onManage={() => openManagement()}
           onPlantingRecords={() => openManagement("planting-records")}
           onSelectGarden={selectGarden}
         />
+      ) : isCareLog ? (
+        <section className="operations-content">
+          <CareLog
+            garden={garden}
+            editingCareEventId={editingCareEventId}
+            form={careForm}
+            headingRef={careLogHeadingRef}
+            isFormOpen={isCareFormOpen}
+            onAdd={openAddCare}
+            onCancel={() => {
+              setIsCareFormOpen(false);
+              setEditingCareEventId(undefined);
+            }}
+            onEdit={openEditCare}
+            onRemove={removeCare}
+            onSave={saveCare}
+            onSetForm={setCareForm}
+          />
+          <Status message={message} />
+        </section>
       ) : (
         <section className="operations-content management-content">
           {editingArea ? (
@@ -577,12 +727,14 @@ function Onboarding({
 function Home({
   garden,
   gardens,
+  onCareLog,
   onManage,
   onPlantingRecords,
   onSelectGarden,
 }: {
   garden: Garden;
   gardens: Garden[];
+  onCareLog: () => void;
   onManage: () => void;
   onPlantingRecords: () => void;
   onSelectGarden: (gardenId: string) => void;
@@ -632,6 +784,9 @@ function Home({
           <h2 id="selected-garden-heading">{garden.name}</h2>
         </div>
         <div className="dashboard-actions">
+          <button className="primary-button" onClick={onCareLog} type="button">
+            Care log
+          </button>
           <button className="primary-button" onClick={onPlantingRecords} type="button">
             Planting records
           </button>
@@ -640,6 +795,223 @@ function Home({
           </button>
         </div>
       </section>
+      <CareSummary garden={garden} />
+    </section>
+  );
+}
+
+function CareSummary({ garden }: { garden: Garden }) {
+  const events = [...garden.careEvents]
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .slice(0, 5);
+
+  return (
+    <section className="care-summary" aria-labelledby="care-summary-heading">
+      <div>
+        <p className="section-eyebrow">Care summary</p>
+        <h2 id="care-summary-heading">Recent care</h2>
+      </div>
+      {events.length ? (
+        <ul className="care-summary-list" aria-label="Recent care events">
+          {events.map((event) => (
+            <li key={event.id}>
+              <span className={`care-event-type care-event-type-${event.type}`}>
+                {event.type === "watering" ? "Watering" : "Fertilizing"}
+              </span>
+              <span>{event.date}</span>
+              <span>{careTargetLabel(event)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="section-context">No care events yet.</p>
+      )}
+    </section>
+  );
+}
+
+function CareLog({
+  garden,
+  editingCareEventId,
+  form,
+  headingRef,
+  isFormOpen,
+  onAdd,
+  onCancel,
+  onEdit,
+  onRemove,
+  onSave,
+  onSetForm,
+}: {
+  garden: Garden;
+  editingCareEventId?: string;
+  form: CareForm;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+  isFormOpen: boolean;
+  onAdd: () => void;
+  onCancel: () => void;
+  onEdit: (event: CareEvent) => void;
+  onRemove: (event: CareEvent) => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => void;
+  onSetForm: (form: CareForm) => void;
+}) {
+  const historicalTarget = garden.careEvents.find(
+    (event) => event.id === editingCareEventId,
+  );
+  const events = [...garden.careEvents].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
+
+  return (
+    <section className="management-section care-log" aria-labelledby="care-log-heading">
+      <div className="section-header">
+        <div>
+          <p className="section-eyebrow">Garden records</p>
+          <h2 id="care-log-heading" ref={headingRef} tabIndex={-1}>
+            Care log
+          </h2>
+          <p className="section-context">{garden.name}</p>
+        </div>
+        <button className="primary-button" onClick={onAdd} type="button">
+          Add care event
+        </button>
+      </div>
+      {isFormOpen ? (
+        <form className="care-form" onSubmit={onSave}>
+          <h3>{editingCareEventId ? "Edit care event" : "Add care event"}</h3>
+          <div className="field">
+            <label htmlFor="care-type">Care type</label>
+            <select
+              id="care-type"
+              onChange={(event) =>
+                onSetForm({ ...form, type: event.target.value as CareEventType })
+              }
+              value={form.type}
+            >
+              <option value="watering">Watering</option>
+              <option value="fertilizing">Fertilizing</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="care-date">Date</label>
+            <input
+              autoFocus
+              id="care-date"
+              onChange={(event) => onSetForm({ ...form, date: event.target.value })}
+              type="date"
+              value={form.date}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="care-target">Target</label>
+            <select
+              id="care-target"
+              onChange={(event) =>
+                onSetForm({
+                  ...form,
+                  targetScope:
+                    event.target.value === "garden" ? "garden" : "planting-area",
+                  growingAreaId:
+                    event.target.value === "garden" ? "" : event.target.value,
+                })
+              }
+              value={form.targetScope === "garden" ? "garden" : form.growingAreaId}
+            >
+              <option value="garden">Whole garden</option>
+              {historicalTarget?.growingAreaId === form.growingAreaId &&
+                !garden.growingAreas.some((area) => area.id === form.growingAreaId) ? (
+                <option value={form.growingAreaId}>
+                  Former planting area: {historicalTarget.growingAreaName}
+                </option>
+              ) : null}
+              {garden.growingAreas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {form.type === "fertilizing" ? (
+            <>
+              <div className="field">
+                <label htmlFor="fertilizer-product">Fertilizer product (optional)</label>
+                <input
+                  id="fertilizer-product"
+                  onChange={(event) => onSetForm({ ...form, fertilizerProduct: event.target.value })}
+                  value={form.fertilizerProduct}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="fertilizer-amount">Fertilizer amount (optional)</label>
+                <input
+                  id="fertilizer-amount"
+                  min="0.01"
+                  onChange={(event) => onSetForm({ ...form, fertilizerAmount: event.target.value })}
+                  step="any"
+                  type="number"
+                  value={form.fertilizerAmount}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="fertilizer-unit">Fertilizer unit (optional)</label>
+                <input
+                  id="fertilizer-unit"
+                  onChange={(event) => onSetForm({ ...form, fertilizerUnit: event.target.value })}
+                  placeholder="e.g. g, tbsp, mL"
+                  value={form.fertilizerUnit}
+                />
+              </div>
+            </>
+          ) : null}
+          <div className="field care-note-field">
+            <label htmlFor="care-note">Note (optional)</label>
+            <input
+              id="care-note"
+              onChange={(event) => onSetForm({ ...form, note: event.target.value })}
+              value={form.note}
+            />
+          </div>
+          <div className="form-actions">
+            <button className="primary-button" type="submit">
+              {editingCareEventId ? "Save care event" : "Add care event"}
+            </button>
+            <button className="secondary-button" onClick={onCancel} type="button">
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : null}
+      {events.length ? (
+        <ul className="care-event-list">
+          {events.map((event) => (
+            <li key={event.id}>
+              <div>
+                <strong>{event.type === "watering" ? "Watering" : "Fertilizing"}</strong>
+                <p>
+                  {event.date} · {careTargetLabel(event)}
+                  {event.type === "fertilizing" && careFertilizerDetails(event)
+                    ? ` · ${careFertilizerDetails(event)}`
+                    : ""}
+                  {event.note ? ` · ${event.note}` : ""}
+                </p>
+              </div>
+              <div className="area-actions">
+                <button className="text-button" onClick={() => onEdit(event)} type="button">
+                  Edit
+                </button>
+                <button className="remove-button" onClick={() => onRemove(event)} type="button">
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="empty-areas">
+          <h3>No care events yet</h3>
+          <p>Record completed watering or fertilizing for {garden.name}.</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -1109,6 +1481,17 @@ type PlantingForm = {
   isActive: boolean;
 };
 
+type CareForm = {
+  type: CareEventType;
+  date: string;
+  note: string;
+  targetScope: CareEventTargetScope;
+  growingAreaId: string;
+  fertilizerProduct: string;
+  fertilizerAmount: string;
+  fertilizerUnit: string;
+};
+
 function emptyPlantingForm(): PlantingForm {
   return {
     commonName: "",
@@ -1118,6 +1501,40 @@ function emptyPlantingForm(): PlantingForm {
     growingAreaId: "",
     isActive: true,
   };
+}
+
+function emptyCareForm(): CareForm {
+  return {
+    type: "watering",
+    date: "",
+    note: "",
+    targetScope: "garden",
+    growingAreaId: "",
+    fertilizerProduct: "",
+    fertilizerAmount: "",
+    fertilizerUnit: "",
+  };
+}
+
+function careTargetLabel(event: CareEvent) {
+  if (event.targetScope === "garden") return "Whole garden";
+  return event.targetAreaDeleted
+    ? `Former planting area: ${event.growingAreaName}`
+    : event.growingAreaName ?? "Planting area";
+}
+
+function careFertilizerDetails(event: CareEvent) {
+  const amount =
+    event.fertilizerAmount === undefined
+      ? undefined
+      : `${event.fertilizerAmount}${event.fertilizerUnit ? ` ${event.fertilizerUnit}` : ""}`;
+  return [
+    event.fertilizerProduct,
+    amount,
+    amount ? undefined : event.fertilizerUnit,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function isCalendarDate(value: string) {

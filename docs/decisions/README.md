@@ -60,8 +60,10 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0015](0015-use-a-metric-garden-plan-overview.md) | Use a metric garden plan overview | Superseded by ADR-0017 |
 | [ADR-0016](0016-separate-planting-records-from-layout-allocations.md) | Separate planting records from layout allocations | Accepted |
 | [ADR-0017](0017-use-a-multi-garden-home-and-management-workspace.md) | Use a visual multi-garden home and dedicated management workspace | Superseded by ADR-0018 |
-| [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md) | Use a multi-garden thumbnail dashboard and selected-garden operations | Accepted |
-| [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md) | Use targeted care events for watering and fertilizing | Accepted |
+| [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md) | Use a multi-garden thumbnail dashboard and selected-garden operations | Superseded by ADR-0021 |
+| [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md) | Use targeted care events for watering and fertilizing | Superseded by ADR-0020 |
+| [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md) | Support garden, planting-area, and plant-group care targets | Accepted |
+| [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md) | Use dashboard garden setup and direct editing | Accepted |
 
 ## Interview Use
 

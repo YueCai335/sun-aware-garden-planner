@@ -1,6 +1,6 @@
 # ADR-0019: Use Targeted Care Events for Watering and Fertilizing
 
-- Status: Accepted
+- Status: Superseded by [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md)
 - Date: 2026-08-30
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md), [ADR-0016](0016-separate-planting-records-from-layout-allocations.md), and [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md)
 
@@ -24,10 +24,10 @@ Store watering and fertilizing as dated care events inside each garden.
   one planting area within that garden.
 - The first event types are `watering` and `fertilizing`.
 - Every event stores its date and an optional note.
-- Fertilizing events also store a fertilizer product name, amount, and unit.
+- Fertilizing events can store a fertilizer product name, amount, and unit.
 - Users can add, edit, delete, and browse care events for the selected garden.
-- The dashboard provides a prominent Care Log action and displays the latest
-  relevant watering and fertilizing dates.
+- The dashboard provides a prominent Care Log action and displays recent care
+  events with clear watering and fertilizing labels.
 - The browser-persisted prototype owns care events until backend persistence
   introduces the database and API model.
 
@@ -37,8 +37,8 @@ Store watering and fertilizing as dated care events inside each garden.
   entry.
 - Planting-area entries preserve detail for containers, raised beds, and zones
   with different care needs.
-- Structured fertilizer fields support later nutrient review and AI
-  explanations while keeping watering records quick to enter.
+- Optional fertilizer fields support later nutrient review and AI explanations
+  while keeping completed-care entry quick.
 - Completed events create trustworthy history before adding schedule and
   reminder logic.
 

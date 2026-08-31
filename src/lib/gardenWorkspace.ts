@@ -53,22 +53,46 @@ export type PlantingRecord = {
   growingAreaId: string;
   isActive: boolean;
 };
+export const careEventTypes = ["watering", "fertilizing"] as const;
+export type CareEventType = (typeof careEventTypes)[number];
+export type CareEventTargetScope = "garden" | "planting-area";
+export type CareEvent = {
+  id: string;
+  type: CareEventType;
+  date: string;
+  note: string;
+  targetScope: CareEventTargetScope;
+  growingAreaId?: string;
+  growingAreaName?: string;
+  targetAreaDeleted?: boolean;
+  fertilizerProduct?: string;
+  fertilizerAmount?: number;
+  fertilizerUnit?: string;
+};
 export type Garden = {
   id: string;
   name: string;
   plan: GardenPlan;
   growingAreas: GrowingArea[];
   plantings: PlantingRecord[];
+  careEvents: CareEvent[];
 };
 export type GardenWorkspace = {
-  version: 4;
+  version: 5;
   selectedGardenId: string;
   gardens: Garden[];
 };
 
+type Version4Garden = Omit<Garden, "careEvents">;
+type Version4GardenWorkspace = {
+  version: 4;
+  selectedGardenId: string;
+  gardens: Version4Garden[];
+};
+
 type Version3GardenWorkspace = {
   version: 3;
-  garden: Omit<Garden, "growingAreas" | "plantings">;
+  garden: Omit<Garden, "growingAreas" | "plantings" | "careEvents">;
   growingAreas: GrowingArea[];
   plantings: PlantingRecord[];
 };
@@ -115,12 +139,13 @@ export function createGarden(name: string): Garden {
     plan: { ...DEFAULT_GARDEN_PLAN },
     growingAreas: [],
     plantings: [],
+    careEvents: [],
   };
 }
 
 export function createGardenWorkspace(name: string): GardenWorkspace {
   const garden = createGarden(name);
-  return { version: 4, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 5, selectedGardenId: garden.id, gardens: [garden] };
 }
 
 export function createDemoGardenWorkspace(): GardenWorkspace {
@@ -184,9 +209,10 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
         isActive: true,
       },
     ],
+    careEvents: [],
   };
 
-  return { version: 4, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 5, selectedGardenId: garden.id, gardens: [garden] };
 }
 
 export function createRectangularLayout(
@@ -366,6 +392,8 @@ export function readGardenWorkspace(
   try {
     const parsed: unknown = JSON.parse(value);
     if (isGardenWorkspace(parsed)) return parsed;
+    if (isVersion4GardenWorkspace(parsed))
+      return migrateVersion4GardenWorkspace(parsed);
     if (isVersion3GardenWorkspace(parsed))
       return migrateVersion3GardenWorkspace(parsed);
     if (isVersion2GardenWorkspace(parsed))
@@ -398,18 +426,43 @@ function migrateVersion3GardenWorkspace(
     ...workspace.garden,
     growingAreas: workspace.growingAreas,
     plantings: workspace.plantings,
+    careEvents: [],
   };
-  return { version: 4, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 5, selectedGardenId: garden.id, gardens: [garden] };
+}
+
+function migrateVersion4GardenWorkspace(
+  workspace: Version4GardenWorkspace,
+): GardenWorkspace {
+  return {
+    version: 5,
+    selectedGardenId: workspace.selectedGardenId,
+    gardens: workspace.gardens.map((garden) => ({ ...garden, careEvents: [] })),
+  };
 }
 
 function isGardenWorkspace(value: unknown): value is GardenWorkspace {
   if (!value || typeof value !== "object") return false;
   const workspace = value as Partial<GardenWorkspace>;
   return (
-    workspace.version === 4 &&
+    workspace.version === 5 &&
     typeof workspace.selectedGardenId === "string" &&
     Array.isArray(workspace.gardens) &&
     workspace.gardens.every(isGarden) &&
+    workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId)
+  );
+}
+
+function isVersion4GardenWorkspace(
+  value: unknown,
+): value is Version4GardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<Version4GardenWorkspace>;
+  return (
+    workspace.version === 4 &&
+    typeof workspace.selectedGardenId === "string" &&
+    Array.isArray(workspace.gardens) &&
+    workspace.gardens.every(isVersion4Garden) &&
     workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId)
   );
 }
@@ -475,6 +528,22 @@ function isGarden(value: unknown): value is Garden {
       isGardenContents(
         (value as Garden).growingAreas,
         (value as Garden).plantings,
+      ) &&
+      Array.isArray((value as Garden).careEvents) &&
+      (value as Garden).careEvents.every((event) =>
+        isCareEvent(event, (value as Garden).growingAreas),
+      ),
+  );
+}
+
+function isVersion4Garden(value: unknown): value is Version4Garden {
+  return Boolean(
+    value &&
+      isNamedRecord(value) &&
+      isGardenPlan((value as Version4Garden).plan) &&
+      isGardenContents(
+        (value as Version4Garden).growingAreas,
+        (value as Version4Garden).plantings,
       ),
   );
 }
@@ -592,6 +661,47 @@ function isPlantingRecord(value: unknown): value is PlantingRecord {
     typeof planting.growingAreaId === "string" &&
     Boolean(planting.growingAreaId.trim()) &&
     typeof planting.isActive === "boolean"
+  );
+}
+
+function isCareEvent(
+  value: unknown,
+  growingAreas?: GrowingArea[],
+): value is CareEvent {
+  if (!value || typeof value !== "object") return false;
+  const event = value as Partial<CareEvent>;
+  const hasValidOptionalFertilizerDetails =
+    (event.fertilizerProduct === undefined ||
+      (typeof event.fertilizerProduct === "string" &&
+        Boolean(event.fertilizerProduct.trim()))) &&
+    (event.fertilizerAmount === undefined ||
+      (typeof event.fertilizerAmount === "number" &&
+        Number.isFinite(event.fertilizerAmount) &&
+        event.fertilizerAmount > 0)) &&
+    (event.fertilizerUnit === undefined ||
+      (typeof event.fertilizerUnit === "string" &&
+        Boolean(event.fertilizerUnit.trim())));
+  return (
+    typeof event.id === "string" &&
+    Boolean(event.id.trim()) &&
+    Boolean(event.type && careEventTypes.includes(event.type)) &&
+    typeof event.date === "string" &&
+    isCalendarDate(event.date) &&
+    typeof event.note === "string" &&
+    (event.targetScope === "garden" || event.targetScope === "planting-area") &&
+    (event.targetScope === "garden" ||
+      (typeof event.growingAreaId === "string" &&
+        Boolean(event.growingAreaId.trim()) &&
+        typeof event.growingAreaName === "string" &&
+        Boolean(event.growingAreaName.trim()) &&
+        (!growingAreas ||
+          growingAreas.some((area) => area.id === event.growingAreaId) ||
+          event.targetAreaDeleted === true))) &&
+    (event.type === "fertilizing"
+      ? hasValidOptionalFertilizerDetails
+      : event.fertilizerProduct === undefined &&
+        event.fertilizerAmount === undefined &&
+        event.fertilizerUnit === undefined)
   );
 }
 

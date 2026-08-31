@@ -1,6 +1,6 @@
 # ADR-0018: Use a Multi-Garden Thumbnail Dashboard and Selected-Garden Operations
 
-- Status: Accepted
+- Status: Superseded by [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md)
 - Date: 2026-08-30
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md), [ADR-0016](0016-separate-planting-records-from-layout-allocations.md), and [ADR-0017](0017-use-a-multi-garden-home-and-management-workspace.md)
 

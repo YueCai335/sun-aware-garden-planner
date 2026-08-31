@@ -199,14 +199,15 @@ Required:
 - Create and switch between gardens, then manage named planting areas within
   each garden.
 - Open a multi-garden dashboard, browse garden-plan thumbnails, select a
-  garden, and use prominent operations actions for that garden.
+  garden, create a garden through a guided setup flow, and enter detailed
+  garden editing directly from its card.
 - Use a dedicated management workspace to change garden dimensions, garden
   names, planting-area names, planting-area types, and layouts.
 - Define measured growing-area layouts and place planned plant allocations on a
   metric grid.
 - Add current plants with plant name, crop family, and planting date.
-- Record garden-wide or planting-area watering and fertilizing events with
-  dates, notes, and fertilizer details when applicable.
+- Record garden-wide, planting-area, or plant-group watering and fertilizing
+  events with dates, notes, and fertilizer details when applicable.
 - Create, complete, and view upcoming care tasks.
 - Preserve browser state through refreshes.
 - Include an understandable empty state and one built-in demo garden.
@@ -219,8 +220,8 @@ Required:
    Garden Management.
 2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.
-3. Add a plant and record a fertilizing event for the whole garden or one
-   planting area with product, amount, unit, and date.
+3. Add a plant and record a fertilizing event for the whole garden, one
+   planting area, or one plant group with optional details and a date.
 4. Create a future care task and mark a completed task as done.
 5. Refresh the browser and recover the saved garden state and layout.
 6. Clear a demo or create a new garden and receive an understandable empty
@@ -323,5 +324,6 @@ Build the Garden Operations MVP in focused slices:
 The current priority is recorded in
 [ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md),
 [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md),
-[ADR-0015](decisions/0015-use-a-metric-garden-plan-overview.md), and
-[ADR-0016](decisions/0016-separate-planting-records-from-layout-allocations.md).
+[ADR-0016](decisions/0016-separate-planting-records-from-layout-allocations.md),
+[ADR-0020](decisions/0020-support-garden-area-and-plant-group-care-targets.md),
+and [ADR-0021](decisions/0021-use-dashboard-garden-setup-and-direct-editing.md).
