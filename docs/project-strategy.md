@@ -205,8 +205,8 @@ Required:
 - Define measured growing-area layouts and place planned plant allocations on a
   metric grid.
 - Add current plants with plant name, crop family, and planting date.
-- Record watering, fertilizing, planting, transplanting, harvesting, and a
-  free-text garden note.
+- Record garden-wide or planting-area watering and fertilizing events with
+  dates, notes, and fertilizer details when applicable.
 - Create, complete, and view upcoming care tasks.
 - Preserve browser state through refreshes.
 - Include an understandable empty state and one built-in demo garden.
@@ -219,7 +219,8 @@ Required:
    Garden Management.
 2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.
-3. Add a plant and record a fertilizing event with type, amount, and date.
+3. Add a plant and record a fertilizing event for the whole garden or one
+   planting area with product, amount, unit, and date.
 4. Create a future care task and mark a completed task as done.
 5. Refresh the browser and recover the saved garden state and layout.
 6. Clear a demo or create a new garden and receive an understandable empty
