@@ -737,6 +737,68 @@ select {
   font-size: 16px;
 }
 
+.care-tabs,
+.care-view-header,
+.care-completion-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.care-tabs {
+  margin-top: 20px;
+  border-bottom: 1px solid #d7ddd6;
+  padding-bottom: 12px;
+}
+
+.care-tabs [aria-selected="true"] {
+  color: #183a2a;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+.care-view {
+  margin-top: 22px;
+}
+
+.care-view-header {
+  justify-content: space-between;
+}
+
+.care-view-header h3,
+.care-task-group h4,
+.care-completion-form h3 {
+  margin: 0;
+  color: #183a2a;
+}
+
+.care-task-group {
+  margin-top: 28px;
+}
+
+.care-completion-form {
+  align-items: end;
+  border-bottom: 1px solid #d7ddd6;
+  padding: 22px 0;
+}
+
+.care-completion-form h3 {
+  align-self: center;
+}
+
+.care-completion-form .field {
+  margin: 0;
+}
+
+.care-completion-form input {
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
 .care-form h3,
 .care-note-field {
   grid-column: 1 / -1;
@@ -1053,6 +1115,7 @@ select {
   .area-form,
   .planting-form,
   .care-form,
+  .care-completion-form,
   .plan-dimensions,
   .layout-dimensions,
   .selected-garden-actions {
@@ -1062,6 +1125,7 @@ select {
 
   .operations-header-active,
   .section-header,
+  .care-completion-form,
   .selected-garden-actions {
     display: grid;
   }

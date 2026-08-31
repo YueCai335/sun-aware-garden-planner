@@ -72,6 +72,20 @@ export type CareEvent = {
   fertilizerAmount?: number;
   fertilizerUnit?: string;
 };
+export type CareTask = {
+  id: string;
+  type: CareEventType;
+  dueDate: string;
+  note: string;
+  targetScope: CareEventTargetScope;
+  growingAreaId?: string;
+  growingAreaName?: string;
+  targetAreaDeleted?: boolean;
+  plantingRecordId?: string;
+  plantingRecordName?: string;
+  targetPlantingRecordDeleted?: boolean;
+  repeatIntervalDays?: number;
+};
 export type Garden = {
   id: string;
   name: string;
@@ -79,17 +93,34 @@ export type Garden = {
   growingAreas: GrowingArea[];
   plantings: PlantingRecord[];
   careEvents: CareEvent[];
+  careTasks: CareTask[];
 };
 export type GardenWorkspace = {
-  version: 6;
+  version: 8;
   selectedGardenId: string;
   gardens: Garden[];
+};
+
+type Version7CareTask = CareTask & { completedDate?: string };
+type Version7Garden = Omit<Garden, "careTasks"> & {
+  careTasks: Version7CareTask[];
+};
+type Version7GardenWorkspace = {
+  version: 7;
+  selectedGardenId: string;
+  gardens: Version7Garden[];
+};
+type Version6Garden = Omit<Garden, "careTasks">;
+type Version6GardenWorkspace = {
+  version: 6;
+  selectedGardenId: string;
+  gardens: Version6Garden[];
 };
 
 type Version5CareEvent = Omit<CareEvent, "targetScope"> & {
   targetScope: "garden" | "planting-area";
 };
-type Version5Garden = Omit<Garden, "careEvents"> & {
+type Version5Garden = Omit<Garden, "careEvents" | "careTasks"> & {
   careEvents: Version5CareEvent[];
 };
 type Version5GardenWorkspace = {
@@ -97,7 +128,7 @@ type Version5GardenWorkspace = {
   selectedGardenId: string;
   gardens: Version5Garden[];
 };
-type Version4Garden = Omit<Garden, "careEvents">;
+type Version4Garden = Omit<Garden, "careEvents" | "careTasks">;
 type Version4GardenWorkspace = {
   version: 4;
   selectedGardenId: string;
@@ -106,14 +137,20 @@ type Version4GardenWorkspace = {
 
 type Version3GardenWorkspace = {
   version: 3;
-  garden: Omit<Garden, "growingAreas" | "plantings" | "careEvents">;
+  garden: Omit<
+    Garden,
+    "growingAreas" | "plantings" | "careEvents" | "careTasks"
+  >;
   growingAreas: GrowingArea[];
   plantings: PlantingRecord[];
 };
 
 type Version2GardenWorkspace = {
   version: 2;
-  garden: Omit<Garden, "growingAreas" | "plantings">;
+  garden: Omit<
+    Garden,
+    "growingAreas" | "plantings" | "careEvents" | "careTasks"
+  >;
   growingAreas: GrowingArea[];
 };
 
@@ -154,12 +191,13 @@ export function createGarden(name: string): Garden {
     growingAreas: [],
     plantings: [],
     careEvents: [],
+    careTasks: [],
   };
 }
 
 export function createGardenWorkspace(name: string): GardenWorkspace {
   const garden = createGarden(name);
-  return { version: 6, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
 }
 
 export function createDemoGardenWorkspace(): GardenWorkspace {
@@ -224,9 +262,10 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
       },
     ],
     careEvents: [],
+    careTasks: [],
   };
 
-  return { version: 6, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
 }
 
 export function createRectangularLayout(
@@ -406,6 +445,10 @@ export function readGardenWorkspace(
   try {
     const parsed: unknown = JSON.parse(value);
     if (isGardenWorkspace(parsed)) return parsed;
+    if (isVersion7GardenWorkspace(parsed))
+      return migrateVersion7GardenWorkspace(parsed);
+    if (isVersion6GardenWorkspace(parsed))
+      return migrateVersion6GardenWorkspace(parsed);
     if (isVersion5GardenWorkspace(parsed))
       return migrateVersion5GardenWorkspace(parsed);
     if (isVersion4GardenWorkspace(parsed))
@@ -443,34 +486,96 @@ function migrateVersion3GardenWorkspace(
     growingAreas: workspace.growingAreas,
     plantings: workspace.plantings,
     careEvents: [],
+    careTasks: [],
   };
-  return { version: 6, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
 }
 
 function migrateVersion4GardenWorkspace(
   workspace: Version4GardenWorkspace,
 ): GardenWorkspace {
   return {
-    version: 6,
+    version: 8,
     selectedGardenId: workspace.selectedGardenId,
-    gardens: workspace.gardens.map((garden) => ({ ...garden, careEvents: [] })),
+    gardens: workspace.gardens.map((garden) => ({
+      ...garden,
+      careEvents: [],
+      careTasks: [],
+    })),
   };
 }
 
 function migrateVersion5GardenWorkspace(
   workspace: Version5GardenWorkspace,
 ): GardenWorkspace {
-  return { version: 6, selectedGardenId: workspace.selectedGardenId, gardens: workspace.gardens };
+  return {
+    version: 8,
+    selectedGardenId: workspace.selectedGardenId,
+    gardens: workspace.gardens.map((garden) => ({ ...garden, careTasks: [] })),
+  };
+}
+
+function migrateVersion6GardenWorkspace(
+  workspace: Version6GardenWorkspace,
+): GardenWorkspace {
+  return {
+    version: 8,
+    selectedGardenId: workspace.selectedGardenId,
+    gardens: workspace.gardens.map((garden) => ({ ...garden, careTasks: [] })),
+  };
+}
+
+function migrateVersion7GardenWorkspace(
+  workspace: Version7GardenWorkspace,
+): GardenWorkspace {
+  return {
+    version: 8,
+    selectedGardenId: workspace.selectedGardenId,
+    gardens: workspace.gardens.map((garden) => ({
+      ...garden,
+      careTasks: garden.careTasks.flatMap(({ completedDate, ...task }) =>
+        completedDate ? [] : [task],
+      ),
+    })),
+  };
 }
 
 function isGardenWorkspace(value: unknown): value is GardenWorkspace {
   if (!value || typeof value !== "object") return false;
   const workspace = value as Partial<GardenWorkspace>;
   return (
-    workspace.version === 6 &&
+    workspace.version === 8 &&
     typeof workspace.selectedGardenId === "string" &&
     Array.isArray(workspace.gardens) &&
     workspace.gardens.every(isGarden) &&
+    workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId)
+  );
+}
+
+function isVersion7GardenWorkspace(
+  value: unknown,
+): value is Version7GardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<Version7GardenWorkspace>;
+  return (
+    workspace.version === 7 &&
+    typeof workspace.selectedGardenId === "string" &&
+    Array.isArray(workspace.gardens) &&
+    workspace.gardens.every(isVersion7Garden) &&
+    workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId)
+  );
+}
+
+function isVersion6GardenWorkspace(
+  value: unknown,
+): value is Version6GardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<Version6GardenWorkspace>;
+  return (
+    workspace.version === 6 &&
+    typeof workspace.selectedGardenId === "string" &&
+    Array.isArray(workspace.gardens) &&
+    workspace.gardens.every(isVersion6Garden) &&
     workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId)
   );
 }
@@ -572,7 +677,47 @@ function isGarden(value: unknown): value is Garden {
           (value as Garden).growingAreas,
           (value as Garden).plantings,
         ),
+      ) &&
+      Array.isArray((value as Garden).careTasks) &&
+      (value as Garden).careTasks.every((task) =>
+        isCareTask(
+          task,
+          (value as Garden).growingAreas,
+          (value as Garden).plantings,
+        ),
       ),
+  );
+}
+
+function isVersion6Garden(value: unknown): value is Version6Garden {
+  if (!value || typeof value !== "object") return false;
+  const garden = value as Version6Garden;
+  return (
+    isNamedRecord(garden) &&
+    isGardenPlan(garden.plan) &&
+    isGardenContents(garden.growingAreas, garden.plantings) &&
+    Array.isArray(garden.careEvents) &&
+    garden.careEvents.every((event) =>
+      isCareEvent(event, garden.growingAreas, garden.plantings),
+    )
+  );
+}
+
+function isVersion7Garden(value: unknown): value is Version7Garden {
+  if (!value || typeof value !== "object") return false;
+  const garden = value as Version7Garden;
+  return (
+    isNamedRecord(garden) &&
+    isGardenPlan(garden.plan) &&
+    isGardenContents(garden.growingAreas, garden.plantings) &&
+    Array.isArray(garden.careEvents) &&
+    garden.careEvents.every((event) =>
+      isCareEvent(event, garden.growingAreas, garden.plantings),
+    ) &&
+    Array.isArray(garden.careTasks) &&
+    garden.careTasks.every((task) =>
+      isVersion7CareTask(task, garden.growingAreas, garden.plantings),
+    )
   );
 }
 
@@ -787,6 +932,71 @@ function isVersion5CareEvent(
   );
 }
 
+function isCareTask(
+  value: unknown,
+  growingAreas?: GrowingArea[],
+  plantings?: PlantingRecord[],
+): value is CareTask {
+  if (!value || typeof value !== "object") return false;
+  const task = value as Partial<CareTask>;
+  const hasNoAreaTarget =
+    task.growingAreaId === undefined &&
+    task.growingAreaName === undefined &&
+    task.targetAreaDeleted === undefined;
+  const hasNoPlantGroupTarget =
+    task.plantingRecordId === undefined &&
+    task.plantingRecordName === undefined &&
+    task.targetPlantingRecordDeleted === undefined;
+  const hasValidDeletionFlags =
+    (task.targetAreaDeleted === undefined ||
+      typeof task.targetAreaDeleted === "boolean") &&
+    (task.targetPlantingRecordDeleted === undefined ||
+      typeof task.targetPlantingRecordDeleted === "boolean");
+  return (
+    typeof task.id === "string" &&
+    Boolean(task.id.trim()) &&
+    Boolean(task.type && careEventTypes.includes(task.type)) &&
+    typeof task.dueDate === "string" &&
+    isCalendarDate(task.dueDate) &&
+    typeof task.note === "string" &&
+    (task.repeatIntervalDays === undefined ||
+      (Number.isInteger(task.repeatIntervalDays) && task.repeatIntervalDays > 0)) &&
+    hasValidDeletionFlags &&
+    (task.targetScope === "garden" ||
+      task.targetScope === "planting-area" ||
+      task.targetScope === "plant-group") &&
+    (task.targetScope === "garden"
+      ? hasNoAreaTarget && hasNoPlantGroupTarget
+      : task.targetScope === "planting-area"
+        ? typeof task.growingAreaId === "string" &&
+          Boolean(task.growingAreaId.trim()) &&
+          typeof task.growingAreaName === "string" &&
+          Boolean(task.growingAreaName.trim()) &&
+          (!growingAreas ||
+            growingAreas.some((area) => area.id === task.growingAreaId) ||
+            task.targetAreaDeleted === true) &&
+          hasNoPlantGroupTarget
+        : typeof task.plantingRecordId === "string" &&
+          Boolean(task.plantingRecordId.trim()) &&
+          typeof task.plantingRecordName === "string" &&
+          Boolean(task.plantingRecordName.trim()) &&
+          (!plantings ||
+            plantings.some((planting) => planting.id === task.plantingRecordId) ||
+            task.targetPlantingRecordDeleted === true) &&
+          hasNoAreaTarget)
+  );
+}
+
+function isVersion7CareTask(
+  value: unknown,
+  growingAreas?: GrowingArea[],
+  plantings?: PlantingRecord[],
+): value is Version7CareTask {
+  if (!isCareTask(value, growingAreas, plantings)) return false;
+  const task = value as Version7CareTask;
+  return task.completedDate === undefined || isCalendarDate(task.completedDate);
+}
+
 function isCareEventBase(value: unknown) {
   if (!value || typeof value !== "object") return false;
   const event = value as Partial<CareEvent>;
@@ -814,6 +1024,26 @@ function isCareEventBase(value: unknown) {
         event.fertilizerAmount === undefined &&
         event.fertilizerUnit === undefined)
   );
+}
+
+export function addDays(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + days));
+  return next.toISOString().slice(0, 10);
+}
+
+export function careTaskStatus(
+  task: Pick<CareTask, "dueDate">,
+  today: string,
+) {
+  if (task.dueDate < today) return "overdue" as const;
+  if (task.dueDate === today) return "due-today" as const;
+  return "upcoming" as const;
+}
+
+export function todayDate() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
 function isCalendarDate(value: string) {

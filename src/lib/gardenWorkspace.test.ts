@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addDays,
+  careTaskStatus,
   clampAllocationCenter,
   clampPlanPosition,
   createRectangularLayout,
@@ -62,7 +64,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v3))).toEqual({
-      version: 6,
+      version: 8,
       selectedGardenId: "garden-1",
       gardens: [
         {
@@ -72,6 +74,7 @@ describe("readGardenWorkspace", () => {
           growingAreas: v3.growingAreas,
           plantings: v3.plantings,
           careEvents: [],
+          careTasks: [],
         },
       ],
     });
@@ -79,7 +82,7 @@ describe("readGardenWorkspace", () => {
 
   it("keeps independent gardens and rejects a record linked outside its garden", () => {
     const valid = {
-      version: 6,
+      version: 8,
       selectedGardenId: "home",
       gardens: [
         {
@@ -96,6 +99,7 @@ describe("readGardenWorkspace", () => {
           ],
           plantings: [],
           careEvents: [],
+          careTasks: [],
         },
         {
           id: "community",
@@ -110,6 +114,7 @@ describe("readGardenWorkspace", () => {
             },
           ],
           careEvents: [],
+          careTasks: [],
           plantings: [
             {
               id: "planting-1",
@@ -184,9 +189,9 @@ describe("readGardenWorkspace", () => {
     };
 
     expect(readGardenWorkspace(JSON.stringify(v4))).toEqual({
-      version: 6,
+      version: 8,
       selectedGardenId: "garden-1",
-      gardens: [{ ...v4.gardens[0], careEvents: [] }],
+      gardens: [{ ...v4.gardens[0], careEvents: [], careTasks: [] }],
     });
   });
 
@@ -238,7 +243,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v1))).toMatchObject({
-      version: 6,
+      version: 8,
       gardens: [
         {
           plan: { widthMeters: 10, depthMeters: 6 },
@@ -252,7 +257,7 @@ describe("readGardenWorkspace", () => {
       ],
     });
     expect(readGardenWorkspace(JSON.stringify(v2))).toMatchObject({
-      version: 6,
+      version: 8,
       selectedGardenId: "garden-2",
       gardens: [
         {
@@ -321,16 +326,17 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v5))).toMatchObject({
-      version: 6,
+      version: 8,
       gardens: [{ careEvents: [{ targetScope: "planting-area" }] }],
     });
 
     const plantGroupWorkspace = {
       ...v5,
-      version: 6,
+      version: 8,
       gardens: [
         {
           ...v5.gardens[0],
+          careTasks: [],
           careEvents: [
             {
               id: "care-2",
@@ -391,6 +397,80 @@ describe("readGardenWorkspace", () => {
     ).toBeUndefined();
   });
 
+  it("migrates v6 care history into v8 task storage", () => {
+    const v6 = {
+      version: 6,
+      selectedGardenId: "garden-1",
+      gardens: [
+        {
+          id: "garden-1",
+          name: "Home garden",
+          plan: { widthMeters: 8, depthMeters: 5 },
+          growingAreas: [],
+          plantings: [],
+          careEvents: [],
+        },
+      ],
+    };
+    expect(readGardenWorkspace(JSON.stringify(v6))).toEqual({
+      version: 8,
+      selectedGardenId: "garden-1",
+      gardens: [{ ...v6.gardens[0], careTasks: [] }],
+    });
+  });
+
+  it("migrates completed v7 tasks out of the open task list", () => {
+    const v7 = {
+      version: 7,
+      selectedGardenId: "garden-1",
+      gardens: [
+        {
+          id: "garden-1",
+          name: "Home garden",
+          plan: { widthMeters: 8, depthMeters: 5 },
+          growingAreas: [],
+          plantings: [],
+          careEvents: [
+            {
+              id: "care-1",
+              type: "watering",
+              date: "2026-08-31",
+              note: "",
+              targetScope: "garden",
+            },
+          ],
+          careTasks: [
+            {
+              id: "completed-task",
+              type: "watering",
+              dueDate: "2026-08-30",
+              note: "",
+              targetScope: "garden",
+              completedDate: "2026-08-31",
+            },
+            {
+              id: "open-task",
+              type: "fertilizing",
+              dueDate: "2026-09-07",
+              note: "Feed tomatoes",
+              targetScope: "garden",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(readGardenWorkspace(JSON.stringify(v7))).toMatchObject({
+      version: 8,
+      gardens: [
+        {
+          careEvents: [{ id: "care-1" }],
+          careTasks: [{ id: "open-task" }],
+        },
+      ],
+    });
+  });
+
   it("validates Garden Plan dimensions and grid-snaps placement values", () => {
     expect(validateGardenPlanDimensions(3, 2)).toBe(true);
     expect(validateGardenPlanDimensions(0, 2)).toBe(false);
@@ -424,5 +504,15 @@ describe("readGardenWorkspace", () => {
       x: 1.1,
       y: 0.5,
     });
+  });
+
+  it("calculates task status and repeat dates from calendar dates", () => {
+    expect(careTaskStatus({ dueDate: "2026-08-30" }, "2026-08-31")).toBe(
+      "overdue",
+    );
+    expect(careTaskStatus({ dueDate: "2026-08-31" }, "2026-08-31")).toBe(
+      "due-today",
+    );
+    expect(addDays("2026-02-28", 1)).toBe("2026-03-01");
   });
 });

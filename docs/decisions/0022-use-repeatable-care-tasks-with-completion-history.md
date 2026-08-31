@@ -1,6 +1,6 @@
 # ADR-0022: Use Repeatable Care Tasks With Completion History
 
-- Status: Accepted
+- Status: Superseded by [ADR-0023](0023-keep-care-history-as-completed-record.md)
 - Date: 2026-08-31
 - Related: [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md)
   and [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md)

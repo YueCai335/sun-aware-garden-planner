@@ -49,7 +49,7 @@ Core capabilities:
   pruning, harvests, pests, and diseases.
 - Store fertilizer type, amount, application area, and photos where useful.
 - Track current plants and year-by-year crop history by growing area.
-- Maintain planned and completed care tasks.
+- Maintain planned care tasks and completed care history.
 - Show an at-a-glance garden plan with growing areas arranged at relative
   metric scale.
 - Visualize measured growing-area layouts and planned plant spacing.
