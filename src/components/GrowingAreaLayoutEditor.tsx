@@ -150,15 +150,15 @@ export function GrowingAreaLayoutEditor({ area, onBack, onChange }: GrowingAreaL
         <div className="layout-canvas-wrap"><MetricLayoutCanvas layout={layout} onEdit={openEdit} onMove={moveAllocation} onRemove={removePlant} onSelect={selectPlant} selectedId={selectedId} /></div>
         <aside className="allocation-controls" aria-label="Plant controls">
           <div className="plant-toolbar">
-            <button aria-expanded={isAddFormOpen} className="secondary-button" onClick={() => { setIsAddFormOpen(!isAddFormOpen); setIsPlantListOpen(false); }} type="button">Add plant</button>
+            <button aria-expanded={isAddFormOpen} className="secondary-button" onClick={() => { setIsAddFormOpen(!isAddFormOpen); setIsPlantListOpen(false); }} type="button">Add planned plant</button>
             <button aria-expanded={isPlantListOpen} className="secondary-button" onClick={() => { setIsPlantListOpen(!isPlantListOpen); setIsAddFormOpen(false); }} type="button">Plant list</button>
           </div>
           {isEditOpen && selected ? <div className="selected-allocation"><h3>Edit {selected.label}</h3><div className="selected-fields"><div className="field"><label htmlFor="allocation-x">X position (m)</label><input id="allocation-x" min="0" onChange={(event) => updateSelected("x", event.target.value)} step="0.1" type="number" value={selected.x} /></div><div className="field"><label htmlFor="allocation-y">Y position (m)</label><input id="allocation-y" min="0" onChange={(event) => updateSelected("y", event.target.value)} step="0.1" type="number" value={selected.y} /></div><div className="field"><label htmlFor="selected-allocation-diameter">Plant spacing (m)</label><input id="selected-allocation-diameter" min="0.1" onChange={(event) => updateSelected("diameterMeters", event.target.value)} step="0.1" type="number" value={selected.diameterMeters} /></div></div><button className="secondary-button" onClick={duplicateSelected} type="button">Duplicate plant</button><button className="remove-button" onClick={() => removePlant(selected.id)} type="button">Remove plant</button></div> : null}
           {isAddFormOpen ? <form className="allocation-form" onSubmit={addAllocation}>
-            <h3>Add plant</h3>
+            <h3>Add planned plant</h3>
             <div className="field"><label htmlFor="allocation-label">Plant name</label><input id="allocation-label" onChange={(event) => setAllocationLabel(event.target.value)} placeholder="e.g. Tomato" required value={allocationLabel} /></div>
             <div className="field"><label htmlFor="allocation-diameter">Plant spacing (m)</label><input id="allocation-diameter" min="0.1" onChange={(event) => setAllocationDiameter(event.target.value)} step="0.1" type="number" value={allocationDiameter} /></div>
-            <button className="primary-button" type="submit">Add plant</button>
+            <button className="primary-button" type="submit">Add planned plant</button>
           </form> : null}
           {isPlantListOpen ? <section className="plant-list-panel" aria-labelledby="plant-list-heading"><h3 id="plant-list-heading">Plants</h3>{layout.allocations.length ? <ul className="allocation-list">{layout.allocations.map((allocation) => <li key={allocation.id}><button aria-pressed={selectedId === allocation.id} className="allocation-select" onClick={() => openEdit(allocation.id)} type="button">{allocation.label} · {allocation.diameterMeters} m</button></li>)}</ul> : <p className="sidebar-note">Add your first plant.</p>}</section> : null}
         </aside>

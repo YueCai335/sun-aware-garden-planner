@@ -34,15 +34,11 @@ export function GardenWorkspace() {
   const [workspace, setWorkspace] = useState<GardenWorkspace>();
   const [isManagement, setIsManagement] = useState(false);
   const [isCareLog, setIsCareLog] = useState(false);
-  const [managementFocus, setManagementFocus] = useState<
-    "garden-management" | "planting-records" | "care-log"
-  >();
+  const [isGardenSetup, setIsGardenSetup] = useState(false);
   const [newGardenName, setNewGardenName] = useState("");
   const [renameGardenName, setRenameGardenName] = useState("");
-  const [isGardenFormOpen, setIsGardenFormOpen] = useState(false);
   const [areaName, setAreaName] = useState("");
   const [areaKind, setAreaKind] = useState<GrowingAreaKind>("raised-bed");
-  const [editingAreaDetailsId, setEditingAreaDetailsId] = useState<string>();
   const [isAreaFormOpen, setIsAreaFormOpen] = useState(false);
   const [editingLayoutId, setEditingLayoutId] = useState<string>();
   const [isPlantingFormOpen, setIsPlantingFormOpen] = useState(false);
@@ -55,7 +51,6 @@ export function GardenWorkspace() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [message, setMessage] = useState("");
   const gardenManagementHeadingRef = useRef<HTMLHeadingElement>(null);
-  const plantingRecordsHeadingRef = useRef<HTMLHeadingElement>(null);
   const careLogHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -99,14 +94,11 @@ export function GardenWorkspace() {
 
   useEffect(() => {
     if ((!isManagement && !isCareLog) || editingArea) return;
-    const heading =
-      managementFocus === "planting-records"
-        ? plantingRecordsHeadingRef.current
-        : managementFocus === "care-log"
-          ? careLogHeadingRef.current
-        : gardenManagementHeadingRef.current;
+    const heading = isCareLog
+      ? careLogHeadingRef.current
+      : gardenManagementHeadingRef.current;
     heading?.focus();
-  }, [editingArea, isCareLog, isManagement, managementFocus, garden?.id]);
+  }, [editingArea, isCareLog, isManagement, garden?.id]);
 
   const updateGarden = (update: (current: Garden) => Garden) => {
     setWorkspace((current) =>
@@ -125,9 +117,7 @@ export function GardenWorkspace() {
 
   const clearTransientState = () => {
     setNewGardenName("");
-    setIsGardenFormOpen(false);
     setEditingLayoutId(undefined);
-    setEditingAreaDetailsId(undefined);
     setIsAreaFormOpen(false);
     setIsPlantingFormOpen(false);
     setEditingPlantingId(undefined);
@@ -146,27 +136,32 @@ export function GardenWorkspace() {
     clearTransientState();
   };
 
-  const openManagement = (
-    target: "garden-management" | "planting-records" = "garden-management",
-  ) => {
-    setManagementFocus(target);
+  const openManagement = (gardenId = garden?.id) => {
+    const nextGarden = workspace?.gardens.find(
+      (candidate) => candidate.id === gardenId,
+    );
+    if (gardenId)
+      setWorkspace((current) =>
+        current ? { ...current, selectedGardenId: gardenId } : current,
+      );
     setIsManagement(true);
     setIsCareLog(false);
-    setRenameGardenName(garden?.name ?? "");
+    setIsGardenSetup(false);
+    setRenameGardenName(nextGarden?.name ?? garden?.name ?? "");
     clearTransientState();
   };
 
   const openCareLog = () => {
-    setManagementFocus("care-log");
     setIsManagement(false);
     setIsCareLog(true);
+    setIsGardenSetup(false);
     clearTransientState();
   };
 
   const returnToDashboard = () => {
     setIsManagement(false);
     setIsCareLog(false);
-    setManagementFocus(undefined);
+    setIsGardenSetup(false);
     clearTransientState();
   };
 
@@ -176,7 +171,9 @@ export function GardenWorkspace() {
     if (!name) return setMessage("Enter a garden name to continue.");
     setWorkspace(createGardenWorkspace(name));
     setNewGardenName("");
-    setMessage("Garden created.");
+    setIsManagement(true);
+    setIsGardenSetup(true);
+    setMessage("Garden created. Continue with its plan and planting areas.");
   };
 
   const addGarden = (event: FormEvent<HTMLFormElement>) => {
@@ -195,8 +192,17 @@ export function GardenWorkspace() {
     );
     setNewGardenName("");
     setRenameGardenName(newGarden.name);
-    setIsGardenFormOpen(false);
-    setMessage(`${name} created and selected.`);
+    setIsManagement(true);
+    setIsGardenSetup(true);
+    setMessage(`${name} created. Continue with its plan and planting areas.`);
+  };
+
+  const openGardenSetup = () => {
+    setNewGardenName("");
+    setIsGardenSetup(true);
+    setIsManagement(false);
+    setIsCareLog(false);
+    clearTransientState();
   };
 
   const renameGarden = (event: FormEvent<HTMLFormElement>) => {
@@ -251,10 +257,9 @@ export function GardenWorkspace() {
     setMessage("Demo garden loaded.");
   };
 
-  const openAreaForm = (area?: GrowingArea) => {
-    setAreaName(area?.name ?? "");
-    setAreaKind(area?.kind ?? "raised-bed");
-    setEditingAreaDetailsId(area?.id);
+  const openAreaForm = () => {
+    setAreaName("");
+    setAreaKind("raised-bed");
     setIsAreaFormOpen(true);
   };
 
@@ -265,16 +270,6 @@ export function GardenWorkspace() {
       return setMessage("Enter a planting-area name to continue.");
 
     updateGarden((current) => {
-      if (editingAreaDetailsId) {
-        return {
-          ...current,
-          growingAreas: current.growingAreas.map((area) =>
-            area.id === editingAreaDetailsId
-              ? { ...area, name, kind: areaKind }
-              : area,
-          ),
-        };
-      }
       const placement = defaultPlanPlacement(current.growingAreas.length);
       return {
         ...current,
@@ -292,12 +287,27 @@ export function GardenWorkspace() {
         ],
       };
     });
-    const action = editingAreaDetailsId ? "updated" : "added";
     setAreaName("");
     setAreaKind("raised-bed");
-    setEditingAreaDetailsId(undefined);
     setIsAreaFormOpen(false);
-    setMessage(`${name} ${action}.`);
+    setMessage(`${name} added.`);
+  };
+
+  const updateAreaDetails = (
+    areaId: string,
+    name: string,
+    kind: GrowingAreaKind,
+  ) => {
+    const trimmedName = name.trim();
+    if (!trimmedName)
+      return setMessage("Enter a planting-area name to continue.");
+    updateGarden((current) => ({
+      ...current,
+      growingAreas: current.growingAreas.map((area) =>
+        area.id === areaId ? { ...area, name: trimmedName, kind } : area,
+      ),
+    }));
+    setMessage(`${trimmedName} updated.`);
   };
 
   const deleteArea = (area: GrowingArea) => {
@@ -368,10 +378,10 @@ export function GardenWorkspace() {
     }));
   };
 
-  const openAddPlanting = () => {
+  const openAddPlanting = (growingAreaId?: string) => {
     if (!garden?.growingAreas.length)
       return setMessage("Add a planting area before recording a planting.");
-    setPlantingForm(emptyPlantingForm());
+    setPlantingForm({ ...emptyPlantingForm(), growingAreaId: growingAreaId ?? "" });
     setEditingPlantingId(undefined);
     setIsPlantingFormOpen(true);
   };
@@ -601,13 +611,21 @@ export function GardenWorkspace() {
           ) : null}
         </div>
       </header>
-      {!isManagement && !isCareLog ? (
+      {isGardenSetup && !isManagement ? (
+        <GardenSetupStart
+          name={newGardenName}
+          message={message}
+          onChangeName={setNewGardenName}
+          onCreate={addGarden}
+          onCancel={returnToDashboard}
+        />
+      ) : !isManagement && !isCareLog ? (
         <Home
           garden={garden}
           gardens={workspace.gardens}
           onCareLog={openCareLog}
-          onManage={() => openManagement()}
-          onPlantingRecords={() => openManagement("planting-records")}
+          onAddGarden={openGardenSetup}
+          onManage={openManagement}
           onSelectGarden={selectGarden}
         />
       ) : isCareLog ? (
@@ -633,25 +651,36 @@ export function GardenWorkspace() {
       ) : (
         <section className="operations-content management-content">
           {editingArea ? (
-            <GrowingAreaLayoutEditor
+            <PlantingAreaEditor
               area={editingArea}
-              onBack={() => setEditingLayoutId(undefined)}
-              onChange={(layout) => updateAreaLayout(editingArea.id, layout)}
+              garden={garden}
+              editingPlantingId={editingPlantingId}
+              isPlantingFormOpen={isPlantingFormOpen}
+              onAddPlanting={() => openAddPlanting(editingArea.id)}
+              onBack={() => {
+                setEditingLayoutId(undefined);
+                setIsPlantingFormOpen(false);
+                setEditingPlantingId(undefined);
+              }}
+              onChangeLayout={(layout) => updateAreaLayout(editingArea.id, layout)}
+              onEditPlanting={openEditPlanting}
+              onRemovePlanting={removePlanting}
+              onSaveAreaDetails={updateAreaDetails}
+              onSavePlanting={savePlanting}
+              onSetPlantingForm={setPlantingForm}
+              onCancelPlanting={() => {
+                setIsPlantingFormOpen(false);
+                setEditingPlantingId(undefined);
+              }}
+              plantingForm={plantingForm}
             />
           ) : (
             <>
               <GardenManagement
-                isGardenFormOpen={isGardenFormOpen}
-                newGardenName={newGardenName}
-                onAddGarden={addGarden}
                 onDeleteGarden={deleteGarden}
-                onOpenGardenForm={() => {
-                  setNewGardenName("");
-                  setIsGardenFormOpen(true);
-                }}
+                isSetup={isGardenSetup}
+                onFinishSetup={returnToDashboard}
                 onRenameGarden={renameGarden}
-                onSetGardenFormOpen={setIsGardenFormOpen}
-                onSetNewGardenName={setNewGardenName}
                 onSetRenameGardenName={setRenameGardenName}
                 renameGardenName={renameGardenName}
                 headingRef={gardenManagementHeadingRef}
@@ -667,7 +696,6 @@ export function GardenWorkspace() {
               <PlantingAreas
                 areaKind={areaKind}
                 areaName={areaName}
-                editingAreaDetailsId={editingAreaDetailsId}
                 garden={garden}
                 isAreaFormOpen={isAreaFormOpen}
                 onDelete={deleteArea}
@@ -676,24 +704,7 @@ export function GardenWorkspace() {
                 onSetAreaKind={setAreaKind}
                 onSetAreaName={setAreaName}
                 onSetFormOpen={setIsAreaFormOpen}
-                onSetEditingId={setEditingAreaDetailsId}
                 onSetLayout={setEditingLayoutId}
-              />
-              <PlantingManagement
-                garden={garden}
-                editingPlantingId={editingPlantingId}
-                isOpen={isPlantingFormOpen}
-                onAdd={openAddPlanting}
-                onCancel={() => {
-                  setIsPlantingFormOpen(false);
-                  setEditingPlantingId(undefined);
-                }}
-                onEdit={openEditPlanting}
-                onRemove={removePlanting}
-                onSave={savePlanting}
-                plantingForm={plantingForm}
-                setPlantingForm={setPlantingForm}
-                headingRef={plantingRecordsHeadingRef}
               />
             </>
           )}
@@ -756,19 +767,59 @@ function Onboarding({
   );
 }
 
+function GardenSetupStart({
+  name,
+  message,
+  onChangeName,
+  onCreate,
+  onCancel,
+}: {
+  name: string;
+  message: string;
+  onChangeName: (name: string) => void;
+  onCreate: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <section className="operations-content garden-onboarding" aria-labelledby="garden-setup-heading">
+      <div>
+        <p className="section-eyebrow">Garden setup</p>
+        <h2 id="garden-setup-heading">Start a new garden</h2>
+        <p>Name the garden, then add its plan, planting areas, and plants.</p>
+      </div>
+      <form className="garden-form" onSubmit={onCreate}>
+        <label htmlFor="new-garden">Garden name</label>
+        <div className="inline-form-row">
+          <input
+            autoFocus
+            id="new-garden"
+            onChange={(event) => onChangeName(event.target.value)}
+            placeholder="e.g. Home garden"
+            required
+            value={name}
+          />
+          <button className="primary-button" type="submit">Continue setup</button>
+          <button className="secondary-button" onClick={onCancel} type="button">Cancel</button>
+        </div>
+      </form>
+      <Status message={message} />
+    </section>
+  );
+}
+
 function Home({
   garden,
   gardens,
+  onAddGarden,
   onCareLog,
   onManage,
-  onPlantingRecords,
   onSelectGarden,
 }: {
   garden: Garden;
   gardens: Garden[];
+  onAddGarden: () => void;
   onCareLog: () => void;
-  onManage: () => void;
-  onPlantingRecords: () => void;
+  onManage: (gardenId?: string) => void;
   onSelectGarden: (gardenId: string) => void;
 }) {
   return (
@@ -778,9 +829,7 @@ function Home({
           <p className="section-eyebrow">Garden dashboard</p>
           <h2>Choose a garden</h2>
         </div>
-        <p>
-          {gardens.length} {gardens.length === 1 ? "garden" : "gardens"}
-        </p>
+        <button className="primary-button" onClick={onAddGarden} type="button">Add garden</button>
       </div>
       <div className="garden-card-grid">
         {gardens.map((candidate) => {
@@ -792,6 +841,10 @@ function Home({
               className="garden-thumbnail-card"
               key={candidate.id}
               onClick={() => onSelectGarden(candidate.id)}
+              onDoubleClick={() => {
+                onSelectGarden(candidate.id);
+                onManage(candidate.id);
+              }}
               type="button"
             >
               <GardenPlanOverview
@@ -819,11 +872,8 @@ function Home({
           <button className="primary-button" onClick={onCareLog} type="button">
             Care log
           </button>
-          <button className="primary-button" onClick={onPlantingRecords} type="button">
-            Planting records
-          </button>
-          <button className="secondary-button" onClick={onManage} type="button">
-            Garden Management
+          <button className="secondary-button" onClick={() => onManage()} type="button">
+            Edit garden
           </button>
         </div>
       </section>
@@ -1076,26 +1126,18 @@ function CareLog({
 }
 
 function GardenManagement({
-  isGardenFormOpen,
-  newGardenName,
-  onAddGarden,
   onDeleteGarden,
-  onOpenGardenForm,
+  isSetup,
+  onFinishSetup,
   onRenameGarden,
-  onSetGardenFormOpen,
-  onSetNewGardenName,
   onSetRenameGardenName,
   renameGardenName,
   headingRef,
 }: {
-  isGardenFormOpen: boolean;
-  newGardenName: string;
-  onAddGarden: (event: FormEvent<HTMLFormElement>) => void;
   onDeleteGarden: () => void;
-  onOpenGardenForm: () => void;
+  isSetup: boolean;
+  onFinishSetup: () => void;
   onRenameGarden: (event: FormEvent<HTMLFormElement>) => void;
-  onSetGardenFormOpen: (open: boolean) => void;
-  onSetNewGardenName: (name: string) => void;
   onSetRenameGardenName: (name: string) => void;
   renameGardenName: string;
   headingRef: RefObject<HTMLHeadingElement | null>;
@@ -1107,18 +1149,12 @@ function GardenManagement({
     >
       <div className="section-header">
         <div>
-          <p className="section-eyebrow">Garden setup</p>
+          <p className="section-eyebrow">Garden workspace</p>
           <h2 id="garden-management-heading" ref={headingRef} tabIndex={-1}>
-            Garden Management
+            {isSetup ? "Garden setup" : "Edit garden"}
           </h2>
         </div>
-        <button
-          className="primary-button"
-          onClick={onOpenGardenForm}
-          type="button"
-        >
-          Add garden
-        </button>
+        {isSetup ? <button className="primary-button" onClick={onFinishSetup} type="button">Finish setup</button> : null}
       </div>
       <form className="garden-form" onSubmit={onRenameGarden}>
         <label htmlFor="rename-garden">Garden name</label>
@@ -1140,30 +1176,6 @@ function GardenManagement({
           </button>
         </div>
       </form>
-      {isGardenFormOpen ? (
-        <form className="garden-form" onSubmit={onAddGarden}>
-          <label htmlFor="new-garden">New garden name</label>
-          <div className="inline-form-row">
-            <input
-              autoFocus
-              id="new-garden"
-              onChange={(event) => onSetNewGardenName(event.target.value)}
-              required
-              value={newGardenName}
-            />
-            <button className="primary-button" type="submit">
-              Create garden
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => onSetGardenFormOpen(false)}
-              type="button"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : null}
     </section>
   );
 }
@@ -1171,7 +1183,6 @@ function GardenManagement({
 function PlantingAreas({
   areaKind,
   areaName,
-  editingAreaDetailsId,
   garden,
   isAreaFormOpen,
   onDelete,
@@ -1180,21 +1191,18 @@ function PlantingAreas({
   onSetAreaKind,
   onSetAreaName,
   onSetFormOpen,
-  onSetEditingId,
   onSetLayout,
 }: {
   areaKind: GrowingAreaKind;
   areaName: string;
-  editingAreaDetailsId?: string;
   garden: Garden;
   isAreaFormOpen: boolean;
   onDelete: (area: GrowingArea) => void;
-  onOpenForm: (area?: GrowingArea) => void;
+  onOpenForm: () => void;
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   onSetAreaKind: (kind: GrowingAreaKind) => void;
   onSetAreaName: (name: string) => void;
   onSetFormOpen: (open: boolean) => void;
-  onSetEditingId: (id: string | undefined) => void;
   onSetLayout: (id: string) => void;
 }) {
   return (
@@ -1204,12 +1212,12 @@ function PlantingAreas({
     >
       <div className="section-header">
         <div>
-          <p className="section-eyebrow">Garden setup</p>
+          <p className="section-eyebrow">Garden workspace</p>
           <h2 id="planting-areas-heading">Planting areas</h2>
         </div>
         <button
           className="primary-button"
-          onClick={() => onOpenForm()}
+          onClick={onOpenForm}
           type="button"
         >
           Add planting area
@@ -1217,9 +1225,7 @@ function PlantingAreas({
       </div>
       {isAreaFormOpen ? (
         <form className="area-form" onSubmit={onSave}>
-          <h3>
-            {editingAreaDetailsId ? "Edit planting area" : "Add planting area"}
-          </h3>
+          <h3>Add planting area</h3>
           <div className="field">
             <label htmlFor="planting-area-name">Planting-area name</label>
             <input
@@ -1254,7 +1260,6 @@ function PlantingAreas({
               className="secondary-button"
               onClick={() => {
                 onSetFormOpen(false);
-                onSetEditingId(undefined);
               }}
               type="button"
             >
@@ -1278,20 +1283,12 @@ function PlantingAreas({
               </div>
               <div className="area-actions">
                 <button
-                  aria-label={`Edit ${area.name} details`}
-                  className="text-button"
-                  onClick={() => onOpenForm(area)}
-                  type="button"
-                >
-                  Edit details
-                </button>
-                <button
-                  aria-label={`${area.layout ? "Edit" : "Set up"} ${area.name} layout`}
+                  aria-label={`Open ${area.name}`}
                   className="text-button"
                   onClick={() => onSetLayout(area.id)}
                   type="button"
                 >
-                  {area.layout ? "Edit layout" : "Set up layout"}
+                  Open planting area
                 </button>
                 <button
                   aria-label={`Delete ${area.name}`}
@@ -1315,7 +1312,92 @@ function PlantingAreas({
   );
 }
 
+function PlantingAreaEditor({
+  area,
+  garden,
+  editingPlantingId,
+  isPlantingFormOpen,
+  plantingForm,
+  onAddPlanting,
+  onBack,
+  onCancelPlanting,
+  onChangeLayout,
+  onEditPlanting,
+  onRemovePlanting,
+  onSaveAreaDetails,
+  onSavePlanting,
+  onSetPlantingForm,
+}: {
+  area: GrowingArea;
+  garden: Garden;
+  editingPlantingId?: string;
+  isPlantingFormOpen: boolean;
+  plantingForm: PlantingForm;
+  onAddPlanting: () => void;
+  onBack: () => void;
+  onCancelPlanting: () => void;
+  onChangeLayout: (layout: GrowingAreaLayout) => void;
+  onEditPlanting: (planting: PlantingRecord) => void;
+  onRemovePlanting: (planting: PlantingRecord) => void;
+  onSaveAreaDetails: (areaId: string, name: string, kind: GrowingAreaKind) => void;
+  onSavePlanting: (event: FormEvent<HTMLFormElement>) => void;
+  onSetPlantingForm: (form: PlantingForm) => void;
+}) {
+  const [name, setName] = useState(area.name);
+  const [kind, setKind] = useState<GrowingAreaKind>(area.kind);
+
+  useEffect(() => {
+    setName(area.name);
+    setKind(area.kind);
+  }, [area.id, area.kind, area.name]);
+
+  return (
+    <>
+      <section className="management-section" aria-labelledby="planting-area-editor-heading">
+        <div className="section-header">
+          <div>
+            <p className="section-eyebrow">Planting area</p>
+            <h2 id="planting-area-editor-heading">{area.name}</h2>
+          </div>
+          <button className="secondary-button" onClick={onBack} type="button">Back to Edit garden</button>
+        </div>
+        <form className="area-form" onSubmit={(event) => {
+          event.preventDefault();
+          onSaveAreaDetails(area.id, name, kind);
+        }}>
+          <div className="field">
+            <label htmlFor="editing-planting-area-name">Planting-area name</label>
+            <input id="editing-planting-area-name" onChange={(event) => setName(event.target.value)} value={name} />
+          </div>
+          <div className="field">
+            <label htmlFor="editing-planting-area-kind">Planting-area type</label>
+            <select id="editing-planting-area-kind" onChange={(event) => setKind(event.target.value as GrowingAreaKind)} value={kind}>
+              {growingAreaKinds.map((candidate) => <option key={candidate} value={candidate}>{growingAreaKindLabels[candidate]}</option>)}
+            </select>
+          </div>
+          <button className="secondary-button" type="submit">Save planting area</button>
+        </form>
+      </section>
+      <GrowingAreaLayoutEditor area={area} onBack={onBack} onChange={onChangeLayout} />
+      <PlantingManagement
+        area={area}
+        garden={garden}
+        editingPlantingId={editingPlantingId}
+        isOpen={isPlantingFormOpen}
+        onAdd={onAddPlanting}
+        onCancel={onCancelPlanting}
+        onEdit={onEditPlanting}
+        onRemove={onRemovePlanting}
+        onSave={onSavePlanting}
+        plantingForm={plantingForm}
+        setPlantingForm={onSetPlantingForm}
+      />
+    </>
+  );
+}
+
 function PlantingManagement({
+  area,
   garden,
   editingPlantingId,
   isOpen,
@@ -1326,8 +1408,8 @@ function PlantingManagement({
   onSave,
   plantingForm,
   setPlantingForm,
-  headingRef,
 }: {
+  area: GrowingArea;
   garden: Garden;
   editingPlantingId?: string;
   isOpen: boolean;
@@ -1338,8 +1420,10 @@ function PlantingManagement({
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   plantingForm: PlantingForm;
   setPlantingForm: (form: PlantingForm) => void;
-  headingRef: RefObject<HTMLHeadingElement | null>;
 }) {
+  const records = garden.plantings.filter(
+    (planting) => planting.growingAreaId === area.id,
+  );
   return (
     <section
       className="plantings-section management-section"
@@ -1347,18 +1431,18 @@ function PlantingManagement({
     >
       <div className="section-header">
         <div>
-          <p className="section-eyebrow">Garden records</p>
-          <h2 id="plantings-heading" ref={headingRef} tabIndex={-1}>
-            Planting records
+          <p className="section-eyebrow">Planting records</p>
+          <h2 id="plantings-heading">
+            Plants in {area.name}
           </h2>
         </div>
         <button className="primary-button" onClick={onAdd} type="button">
-          Add planting
+          Add plant
         </button>
       </div>
       {isOpen ? (
         <form className="planting-form" onSubmit={onSave}>
-          <h3>{editingPlantingId ? "Edit planting" : "Add planting"}</h3>
+          <h3>{editingPlantingId ? "Edit plant" : "Add plant"}</h3>
           <div className="field">
             <label htmlFor="planting-common-name">Plant name</label>
             <input
@@ -1423,26 +1507,6 @@ function PlantingManagement({
               value={plantingForm.plantingDate}
             />
           </div>
-          <div className="field">
-            <label htmlFor="planting-growing-area">Planting area</label>
-            <select
-              id="planting-growing-area"
-              onChange={(event) =>
-                setPlantingForm({
-                  ...plantingForm,
-                  growingAreaId: event.target.value,
-                })
-              }
-              value={plantingForm.growingAreaId}
-            >
-              <option value="">Choose a planting area</option>
-              {garden.growingAreas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
-          </div>
           <label className="checkbox-field">
             <input
               checked={plantingForm.isActive}
@@ -1458,7 +1522,7 @@ function PlantingManagement({
           </label>
           <div className="form-actions">
             <button className="primary-button" type="submit">
-              {editingPlantingId ? "Save planting" : "Add planting"}
+              {editingPlantingId ? "Save plant" : "Add plant"}
             </button>
             <button
               className="secondary-button"
@@ -1470,17 +1534,11 @@ function PlantingManagement({
           </div>
         </form>
       ) : null}
-      {garden.plantings.length ? (
+      {records.length ? (
         <div className="planting-groups">
-          {garden.growingAreas.map((area) => {
-            const records = garden.plantings.filter(
-              (planting) => planting.growingAreaId === area.id,
-            );
-            return records.length ? (
-              <section className="planting-group" key={area.id}>
-                <h3>{area.name}</h3>
-                <ul className="planting-list">
-                  {records.map((planting) => (
+          <section className="planting-group">
+            <ul className="planting-list">
+              {records.map((planting) => (
                     <li key={planting.id}>
                       <div>
                         <strong>{planting.commonName}</strong>
@@ -1507,16 +1565,14 @@ function PlantingManagement({
                         </button>
                       </div>
                     </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null;
-          })}
+              ))}
+            </ul>
+          </section>
         </div>
       ) : (
         <div className="empty-areas">
-          <h3>No planting records yet</h3>
-          <p>Record what you planted in each planting area.</p>
+          <h3>No plants yet</h3>
+          <p>Record what you planted in {area.name}.</p>
         </div>
       )}
     </section>
