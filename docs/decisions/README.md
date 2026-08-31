@@ -64,6 +64,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md) | Use targeted care events for watering and fertilizing | Superseded by ADR-0020 |
 | [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md) | Support garden, planting-area, and plant-group care targets | Accepted |
 | [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md) | Use dashboard garden setup and direct editing | Accepted |
+| [ADR-0022](0022-use-repeatable-care-tasks-with-completion-history.md) | Use repeatable care tasks with completion history | Accepted |
 
 ## Interview Use
 
