@@ -62,7 +62,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v3))).toEqual({
-      version: 5,
+      version: 6,
       selectedGardenId: "garden-1",
       gardens: [
         {
@@ -79,7 +79,7 @@ describe("readGardenWorkspace", () => {
 
   it("keeps independent gardens and rejects a record linked outside its garden", () => {
     const valid = {
-      version: 5,
+      version: 6,
       selectedGardenId: "home",
       gardens: [
         {
@@ -184,7 +184,7 @@ describe("readGardenWorkspace", () => {
     };
 
     expect(readGardenWorkspace(JSON.stringify(v4))).toEqual({
-      version: 5,
+      version: 6,
       selectedGardenId: "garden-1",
       gardens: [{ ...v4.gardens[0], careEvents: [] }],
     });
@@ -238,7 +238,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v1))).toMatchObject({
-      version: 5,
+      version: 6,
       gardens: [
         {
           plan: { widthMeters: 10, depthMeters: 6 },
@@ -252,7 +252,7 @@ describe("readGardenWorkspace", () => {
       ],
     });
     expect(readGardenWorkspace(JSON.stringify(v2))).toMatchObject({
-      version: 5,
+      version: 6,
       selectedGardenId: "garden-2",
       gardens: [
         {
@@ -261,6 +261,134 @@ describe("readGardenWorkspace", () => {
         },
       ],
     });
+  });
+
+  it("migrates v5 care events and validates plant-group history", () => {
+    const v5 = {
+      version: 5,
+      selectedGardenId: "garden-1",
+      gardens: [
+        {
+          id: "garden-1",
+          name: "Home garden",
+          plan: { widthMeters: 8, depthMeters: 5 },
+          growingAreas: [
+            {
+              id: "area-1",
+              name: "North bed",
+              kind: "raised-bed",
+              planPlacement: { x: 1, y: 1, rotationDegrees: 0 },
+            },
+            {
+              id: "area-2",
+              name: "South bed",
+              kind: "in-ground",
+              planPlacement: { x: 3, y: 1, rotationDegrees: 0 },
+            },
+          ],
+          plantings: [
+            {
+              id: "planting-1",
+              commonName: "Tomatoes",
+              cropFamily: "nightshade",
+              quantity: 4,
+              plantingDate: "2026-05-18",
+              growingAreaId: "area-1",
+              isActive: true,
+            },
+            {
+              id: "planting-2",
+              commonName: "Tomatoes",
+              cropFamily: "nightshade",
+              quantity: 2,
+              plantingDate: "2026-05-20",
+              growingAreaId: "area-2",
+              isActive: true,
+            },
+          ],
+          careEvents: [
+            {
+              id: "care-1",
+              type: "watering",
+              date: "2026-06-01",
+              note: "",
+              targetScope: "planting-area",
+              growingAreaId: "area-1",
+              growingAreaName: "North bed",
+            },
+          ],
+        },
+      ],
+    };
+    expect(readGardenWorkspace(JSON.stringify(v5))).toMatchObject({
+      version: 6,
+      gardens: [{ careEvents: [{ targetScope: "planting-area" }] }],
+    });
+
+    const plantGroupWorkspace = {
+      ...v5,
+      version: 6,
+      gardens: [
+        {
+          ...v5.gardens[0],
+          careEvents: [
+            {
+              id: "care-2",
+              type: "fertilizing",
+              date: "2026-06-02",
+              note: "",
+              targetScope: "plant-group",
+              plantingRecordId: "planting-2",
+              plantingRecordName: "Tomatoes · South bed",
+            },
+          ],
+        },
+      ],
+    };
+    expect(readGardenWorkspace(JSON.stringify(plantGroupWorkspace))).toEqual(
+      plantGroupWorkspace,
+    );
+    expect(
+      readGardenWorkspace(
+        JSON.stringify({
+          ...plantGroupWorkspace,
+          gardens: [
+            {
+              ...plantGroupWorkspace.gardens[0],
+              plantings: [],
+              careEvents: [
+                {
+                  ...plantGroupWorkspace.gardens[0].careEvents[0],
+                  targetPlantingRecordDeleted: true,
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      gardens: [
+        { careEvents: [{ targetPlantingRecordDeleted: true }] },
+      ],
+    });
+    expect(
+      readGardenWorkspace(
+        JSON.stringify({
+          ...plantGroupWorkspace,
+          gardens: [
+            {
+              ...plantGroupWorkspace.gardens[0],
+              careEvents: [
+                {
+                  ...plantGroupWorkspace.gardens[0].careEvents[0],
+                  plantingRecordId: "missing-planting",
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    ).toBeUndefined();
   });
 
   it("validates Garden Plan dimensions and grid-snaps placement values", () => {

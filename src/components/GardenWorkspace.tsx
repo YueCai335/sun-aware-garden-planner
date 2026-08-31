@@ -230,7 +230,7 @@ export function GardenWorkspace() {
       return;
     }
 
-    setWorkspace({ version: 5, selectedGardenId: gardens[0].id, gardens });
+    setWorkspace({ version: 6, selectedGardenId: gardens[0].id, gardens });
     setRenameGardenName(gardens[0].name);
     clearTransientState();
     setMessage(`${garden.name} deleted.`);
@@ -320,8 +320,13 @@ export function GardenWorkspace() {
         (planting) => planting.growingAreaId !== area.id,
       ),
       careEvents: current.careEvents.map((event) =>
-        event.growingAreaId === area.id
+        event.targetScope === "planting-area" && event.growingAreaId === area.id
           ? { ...event, targetAreaDeleted: true }
+          : event.targetScope === "plant-group" &&
+              linkedPlantings.some(
+                (planting) => planting.id === event.plantingRecordId,
+              )
+            ? { ...event, targetPlantingRecordDeleted: true }
           : event,
       ),
     }));
@@ -435,6 +440,12 @@ export function GardenWorkspace() {
       plantings: current.plantings.filter(
         (record) => record.id !== planting.id,
       ),
+      careEvents: current.careEvents.map((event) =>
+        event.targetScope === "plant-group" &&
+        event.plantingRecordId === planting.id
+          ? { ...event, targetPlantingRecordDeleted: true }
+          : event,
+      ),
     }));
     setMessage(`${planting.commonName} removed.`);
   };
@@ -452,6 +463,7 @@ export function GardenWorkspace() {
       note: event.note,
       targetScope: event.targetScope,
       growingAreaId: event.growingAreaId ?? "",
+      plantingRecordId: event.plantingRecordId ?? "",
       fertilizerProduct: event.fertilizerProduct ?? "",
       fertilizerAmount: event.fertilizerAmount ? String(event.fertilizerAmount) : "",
       fertilizerUnit: event.fertilizerUnit ?? "",
@@ -471,6 +483,9 @@ export function GardenWorkspace() {
     const area = garden.growingAreas.find(
       (candidate) => candidate.id === careForm.growingAreaId,
     );
+    const planting = garden.plantings.find(
+      (candidate) => candidate.id === careForm.plantingRecordId,
+    );
     if (
       careForm.targetScope === "planting-area" &&
       !area &&
@@ -478,6 +493,13 @@ export function GardenWorkspace() {
         previous.growingAreaId === careForm.growingAreaId)
     )
       return setMessage("Choose an existing planting area.");
+    if (
+      careForm.targetScope === "plant-group" &&
+      !planting &&
+      !(previous?.targetScope === "plant-group" &&
+        previous.plantingRecordId === careForm.plantingRecordId)
+    )
+      return setMessage("Choose an existing plant group.");
 
     const fertilizerProduct = careForm.fertilizerProduct.trim();
     const fertilizerUnit = careForm.fertilizerUnit.trim();
@@ -501,6 +523,16 @@ export function GardenWorkspace() {
             growingAreaId: careForm.growingAreaId,
             growingAreaName: area?.name ?? previous?.growingAreaName,
             ...(area ? {} : { targetAreaDeleted: true }),
+          }
+        : {}),
+      ...(careForm.targetScope === "plant-group"
+        ? {
+            plantingRecordId: careForm.plantingRecordId,
+            plantingRecordName:
+              planting
+                ? plantGroupDisplayName(planting, garden)
+                : previous?.plantingRecordName,
+            ...(planting ? {} : { targetPlantingRecordDeleted: true }),
           }
         : {}),
       ...(careForm.type === "fertilizing"
@@ -906,29 +938,56 @@ function CareLog({
             <label htmlFor="care-target">Target</label>
             <select
               id="care-target"
-              onChange={(event) =>
+              onChange={(event) => {
+                const [targetScope, targetId] = event.target.value.split(":");
                 onSetForm({
                   ...form,
-                  targetScope:
-                    event.target.value === "garden" ? "garden" : "planting-area",
+                  targetScope: targetScope as CareEventTargetScope,
                   growingAreaId:
-                    event.target.value === "garden" ? "" : event.target.value,
-                })
+                    targetScope === "planting-area" ? targetId : "",
+                  plantingRecordId:
+                    targetScope === "plant-group" ? targetId : "",
+                });
+              }}
+              value={
+                form.targetScope === "garden"
+                  ? "garden"
+                  : `${form.targetScope}:${form.targetScope === "planting-area" ? form.growingAreaId : form.plantingRecordId}`
               }
-              value={form.targetScope === "garden" ? "garden" : form.growingAreaId}
             >
               <option value="garden">Whole garden</option>
-              {historicalTarget?.growingAreaId === form.growingAreaId &&
-                !garden.growingAreas.some((area) => area.id === form.growingAreaId) ? (
-                <option value={form.growingAreaId}>
-                  Former planting area: {historicalTarget.growingAreaName}
-                </option>
-              ) : null}
-              {garden.growingAreas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
+              <optgroup label="Planting areas">
+                {historicalTarget?.targetScope === "planting-area" &&
+                  historicalTarget.growingAreaId === form.growingAreaId &&
+                  !garden.growingAreas.some(
+                    (area) => area.id === form.growingAreaId,
+                  ) ? (
+                  <option value={`planting-area:${form.growingAreaId}`}>
+                    Former planting area: {historicalTarget.growingAreaName}
+                  </option>
+                ) : null}
+                {garden.growingAreas.map((area) => (
+                  <option key={area.id} value={`planting-area:${area.id}`}>
+                    {area.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Plant groups">
+                {historicalTarget?.targetScope === "plant-group" &&
+                  historicalTarget.plantingRecordId === form.plantingRecordId &&
+                  !garden.plantings.some(
+                    (planting) => planting.id === form.plantingRecordId,
+                  ) ? (
+                  <option value={`plant-group:${form.plantingRecordId}`}>
+                    Former plant group: {historicalTarget.plantingRecordName}
+                  </option>
+                ) : null}
+                {garden.plantings.map((planting) => (
+                  <option key={planting.id} value={`plant-group:${planting.id}`}>
+                    {plantGroupDisplayName(planting, garden)}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
           {form.type === "fertilizing" ? (
@@ -1487,6 +1546,7 @@ type CareForm = {
   note: string;
   targetScope: CareEventTargetScope;
   growingAreaId: string;
+  plantingRecordId: string;
   fertilizerProduct: string;
   fertilizerAmount: string;
   fertilizerUnit: string;
@@ -1510,6 +1570,7 @@ function emptyCareForm(): CareForm {
     note: "",
     targetScope: "garden",
     growingAreaId: "",
+    plantingRecordId: "",
     fertilizerProduct: "",
     fertilizerAmount: "",
     fertilizerUnit: "",
@@ -1518,9 +1579,20 @@ function emptyCareForm(): CareForm {
 
 function careTargetLabel(event: CareEvent) {
   if (event.targetScope === "garden") return "Whole garden";
+  if (event.targetScope === "plant-group")
+    return event.targetPlantingRecordDeleted
+      ? `Former plant group: ${event.plantingRecordName}`
+      : event.plantingRecordName ?? "Plant group";
   return event.targetAreaDeleted
     ? `Former planting area: ${event.growingAreaName}`
     : event.growingAreaName ?? "Planting area";
+}
+
+function plantGroupDisplayName(planting: PlantingRecord, garden: Garden) {
+  const area = garden.growingAreas.find(
+    (candidate) => candidate.id === planting.growingAreaId,
+  );
+  return `${planting.commonName} · ${area?.name ?? "Planting area"}`;
 }
 
 function careFertilizerDetails(event: CareEvent) {
