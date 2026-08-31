@@ -309,6 +309,7 @@ select {
 .header-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -402,22 +403,120 @@ select {
   display: block;
 }
 
-.operations-sidebar {
-  padding-top: 8px;
+.operations-content {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 42px 0 80px;
 }
 
-.sidebar-count {
+.management-content {
+  display: grid;
+  gap: 42px;
+}
+
+.management-content .plantings-section {
   margin: 0;
-  color: #33483a;
-  font-size: 15px;
 }
 
-.sidebar-count strong {
-  display: block;
+.garden-dashboard {
+  display: grid;
+  gap: 28px;
+}
+
+.dashboard-heading,
+.selected-garden-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.dashboard-heading {
+  border-bottom: 1px solid #cfd7ce;
+  padding-bottom: 18px;
+}
+
+.dashboard-heading h2,
+.selected-garden-actions h2 {
+  margin: 0;
   color: #183a2a;
-  font-size: 38px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 24px;
+}
+
+.dashboard-heading > p {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.garden-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.garden-thumbnail-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 0;
+  background: #ffffff;
+  color: #1d2920;
+  cursor: pointer;
+  text-align: left;
+}
+
+.garden-thumbnail-card:hover,
+.garden-thumbnail-card:focus-visible {
+  border-color: #397a5a;
+  box-shadow: 0 0 0 3px #d7ead9;
+  outline: 0;
+}
+
+.garden-thumbnail-card[aria-pressed="true"] {
+  border: 2px solid #276445;
+  box-shadow: 0 0 0 3px #d7ead9;
+}
+
+.garden-plan-thumbnail {
+  overflow: hidden;
+  border-bottom: 1px solid #d7ddd6;
+  background: #ffffff;
+}
+
+.garden-card-details {
+  display: grid;
+  gap: 4px;
+  padding: 0 16px 16px;
+}
+
+.garden-card-details strong {
+  color: #183a2a;
+}
+
+.garden-card-details span {
+  color: #657268;
+  font-size: 14px;
+}
+
+.selected-garden-actions {
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.selected-garden-actions .section-eyebrow {
+  margin-bottom: 6px;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .sidebar-note {
@@ -435,6 +534,109 @@ select {
   padding-bottom: 18px;
 }
 
+.garden-plan {
+  min-width: 0;
+}
+
+.plan-count {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.plan-intro {
+  margin: 16px 0;
+  color: #657268;
+}
+
+.plan-dimensions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  border-bottom: 1px solid #d7ddd6;
+  padding-bottom: 20px;
+}
+
+.plan-dimensions .field {
+  margin: 0;
+}
+
+.plan-dimensions input {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.garden-plan-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 0.75fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 24px;
+}
+
+.plan-canvas-wrap {
+  overflow: auto;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.plan-controls {
+  border-left: 1px solid #d7ddd6;
+  padding-left: 24px;
+}
+
+.plan-controls h3 {
+  margin: 0 0 12px;
+  color: #183a2a;
+  font-size: 16px;
+}
+
+.plan-area-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-area-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-area-select {
+  flex: 1;
+  border: 1px solid #cfd7ce;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: #183a2a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.plan-area-select[aria-pressed="true"] {
+  border-color: #397a5a;
+  background: #edf5ec;
+}
+
+.selected-plan-area {
+  margin-top: 24px;
+  border-top: 1px solid #d7ddd6;
+  padding-top: 20px;
+}
+
+.selected-plan-area .secondary-button {
+  margin-top: 16px;
+}
+
 .area-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr) auto;
@@ -446,6 +648,96 @@ select {
 
 .area-form .field {
   margin: 0;
+}
+
+.plantings-section {
+  margin: 42px 0;
+}
+
+.planting-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  border-bottom: 1px solid #d7ddd6;
+  padding: 22px 0;
+}
+
+.planting-form h3,
+.planting-group h3 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 16px;
+}
+
+.planting-form h3 {
+  grid-column: 1 / -1;
+}
+
+.planting-form .field {
+  margin: 0;
+}
+
+.planting-form input,
+.planting-form select {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  color: #374034;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.checkbox-field input {
+  width: auto;
+}
+
+.planting-groups {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.planting-group {
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.planting-list {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planting-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.planting-list p {
+  margin: 5px 0 0;
+  color: #657268;
+  font-size: 14px;
+}
+
+.planting-list .text-button {
+  margin-top: 0;
 }
 
 .form-actions {
@@ -628,6 +920,7 @@ select {
 @media (max-width: 720px) {
   .operations-header,
   .operations-layout,
+  .operations-content,
   .garden-onboarding {
     width: min(100% - 32px, 1180px);
   }
@@ -640,13 +933,17 @@ select {
   .section-header,
   .inline-form-row,
   .area-form,
-  .layout-dimensions {
+  .planting-form,
+  .plan-dimensions,
+  .layout-dimensions,
+  .selected-garden-actions {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
   .operations-header-active,
-  .section-header {
+  .section-header,
+  .selected-garden-actions {
     display: grid;
   }
 
@@ -654,14 +951,6 @@ select {
     grid-template-columns: 1fr;
     gap: 28px;
     padding-top: 28px;
-  }
-
-  .operations-sidebar {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    border-bottom: 1px solid #cfd7ce;
-    padding-bottom: 18px;
   }
 
   .sidebar-note {
@@ -672,7 +961,17 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .garden-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
   .allocation-controls {
+    border-top: 1px solid #d7ddd6;
+    border-left: 0;
+    padding: 24px 0 0;
+  }
+
+  .plan-controls {
     border-top: 1px solid #d7ddd6;
     border-left: 0;
     padding: 24px 0 0;

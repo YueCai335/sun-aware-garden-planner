@@ -42,13 +42,16 @@ Help users maintain a durable record across a growing season.
 
 Core capabilities:
 
-- Create gardens and named growing areas, such as an in-ground zone, raised
-  bed, container group, or greenhouse shelf.
+- Create, switch, rename, and manage separate gardens, such as a home garden
+  and a community plot. Each garden contains named planting areas, such as an
+  in-ground zone, raised bed, container group, or greenhouse shelf.
 - Record seed starting, planting, transplanting, watering, fertilizing,
   pruning, harvests, pests, and diseases.
 - Store fertilizer type, amount, application area, and photos where useful.
 - Track current plants and year-by-year crop history by growing area.
 - Maintain planned and completed care tasks.
+- Show an at-a-glance garden plan with growing areas arranged at relative
+  metric scale.
 - Visualize measured growing-area layouts and planned plant spacing.
 
 ### 2. Garden Planning and Applied AI
@@ -193,7 +196,12 @@ workflow.
 
 Required:
 
-- Create one garden and named growing areas.
+- Create and switch between gardens, then manage named planting areas within
+  each garden.
+- Open a multi-garden dashboard, browse garden-plan thumbnails, select a
+  garden, and use prominent operations actions for that garden.
+- Use a dedicated management workspace to change garden dimensions, garden
+  names, planting-area names, planting-area types, and layouts.
 - Define measured growing-area layouts and place planned plant allocations on a
   metric grid.
 - Add current plants with plant name, crop family, and planting date.
@@ -206,8 +214,10 @@ Required:
 
 #### Phase 1 Acceptance Scenario
 
-1. Open the built-in garden or create a garden and named growing area.
-2. Set a growing area's dimensions, place a labelled allocation circle, and
+1. Open the built-in garden or create a garden, browse its garden-plan
+   thumbnail, select it from the dashboard, and open one planting area from
+   Garden Management.
+2. Set that growing area's dimensions, place a labelled allocation circle, and
    observe its snapped metric position.
 3. Add a plant and record a fertilizing event with type, amount, and date.
 4. Create a future care task and mark a completed task as done.
@@ -300,17 +310,17 @@ Until then, resume bullets should describe only completed functionality.
 
 Build the Garden Operations MVP in focused slices:
 
-1. Extend the browser-persisted growing-area model with metric layout and
-   plant-allocation data.
-2. Deliver a grid-snapped planting-layout editor with accessible precise
-   controls and browser persistence.
-3. Deliver the garden dashboard and journal workflow.
-4. Add task completion and date-based views.
-5. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
+1. Deliver planting records with crop family, quantity, planting date, and a
+   growing-area link.
+2. Deliver the garden dashboard and journal workflow.
+3. Add task completion and date-based views.
+4. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
    stable product model.
-6. Add crop rotation and the AI assistant after persisted operations data is
+5. Add crop rotation and the AI assistant after persisted operations data is
    available.
 
 The current priority is recorded in
-[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md)
-and [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md).
+[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md),
+[ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md),
+[ADR-0015](decisions/0015-use-a-metric-garden-plan-overview.md), and
+[ADR-0016](decisions/0016-separate-planting-records-from-layout-allocations.md).
