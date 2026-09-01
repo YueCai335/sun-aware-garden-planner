@@ -67,6 +67,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0022](0022-use-repeatable-care-tasks-with-completion-history.md) | Use repeatable care tasks with completion history | Superseded by ADR-0023 |
 | [ADR-0023](0023-keep-care-history-as-completed-record.md) | Keep care history as the completed-care record | Accepted |
 | [ADR-0024](0024-use-explicit-local-garden-import-for-postgresql.md) | Use an explicit local-garden import for PostgreSQL | Accepted |
+| [ADR-0025](0025-use-three-season-crop-rotation-warnings.md) | Use three-season crop rotation warnings | Accepted |
 
 ## Interview Use
 
