@@ -1,6 +1,6 @@
 # ADR-0021: Use Dashboard Garden Setup and Direct Editing
 
-- Status: Accepted
+- Status: Superseded by ADR-0029
 - Date: 2026-08-30
 - Supersedes: [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md)
 - Related: [ADR-0016](0016-separate-planting-records-from-layout-allocations.md) and [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md)

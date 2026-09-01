@@ -26,7 +26,7 @@ def workspace_payload():
                             "widthMeters": 2,
                             "depthMeters": 1,
                             "boundary": [{"x": 0, "y": 0}, {"x": 2, "y": 0}, {"x": 0, "y": 1}],
-                            "allocations": [{"id": "allocation-1", "label": "Tomato", "x": 0.5, "y": 0.5, "diameterMeters": 0.5}],
+                            "allocations": [{"id": "allocation-1", "label": "Tomato", "plantType": "Tomato", "color": "#d9534f", "x": 0.5, "y": 0.5, "diameterMeters": 0.5}],
                         },
                     }
                 ],
@@ -34,6 +34,8 @@ def workspace_payload():
                     {
                         "id": "planting-1",
                         "commonName": "Tomatoes",
+                        "plantType": "Tomato",
+                        "variety": "Sun Gold",
                         "cropFamily": "nightshade",
                         "quantity": 4,
                         "plantingDate": "2026-05-18",
@@ -126,6 +128,16 @@ def test_invalid_import_returns_validation_error_and_persists_nothing(client):
 
     assert response.status_code == 422
     assert "same garden" in response.text
+    assert client.get("/workspaces/local-workspace-1").status_code == 404
+
+
+def test_import_rejects_an_invalid_plant_allocation_color(client):
+    payload = deepcopy(workspace_payload())
+    payload["gardens"][0]["growingAreas"][0]["layout"]["allocations"][0]["color"] = "tomato-red"
+
+    response = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert response.status_code == 422
     assert client.get("/workspaces/local-workspace-1").status_code == 404
 
 

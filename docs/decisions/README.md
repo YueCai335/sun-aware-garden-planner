@@ -63,12 +63,16 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md) | Use a multi-garden thumbnail dashboard and selected-garden operations | Superseded by ADR-0021 |
 | [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md) | Use targeted care events for watering and fertilizing | Superseded by ADR-0020 |
 | [ADR-0020](0020-support-garden-area-and-plant-group-care-targets.md) | Support garden, planting-area, and plant-group care targets | Accepted |
-| [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md) | Use dashboard garden setup and direct editing | Accepted |
+| [ADR-0021](0021-use-dashboard-garden-setup-and-direct-editing.md) | Use dashboard garden setup and direct editing | Superseded by ADR-0029 |
 | [ADR-0022](0022-use-repeatable-care-tasks-with-completion-history.md) | Use repeatable care tasks with completion history | Superseded by ADR-0023 |
 | [ADR-0023](0023-keep-care-history-as-completed-record.md) | Keep care history as the completed-care record | Accepted |
 | [ADR-0024](0024-use-explicit-local-garden-import-for-postgresql.md) | Use an explicit local-garden import for PostgreSQL | Accepted |
 | [ADR-0025](0025-use-three-season-crop-rotation-warnings.md) | Use three-season crop rotation warnings | Accepted |
 | [ADR-0026](0026-use-a-next-season-planning-workspace.md) | Use a next-season planning workspace for crop rotation | Accepted |
+| [ADR-0027](0027-use-persistent-plant-colors-and-garden-plan-zoom.md) | Use persistent plant colors and Garden Plan zoom | Accepted |
+| [ADR-0028](0028-use-plant-types-varieties-and-bilingual-color-aliases.md) | Use plant types, varieties, and bilingual color aliases | Accepted |
+| [ADR-0029](0029-use-a-thumbnail-first-garden-hub.md) | Use a thumbnail-first Garden Hub | Accepted |
+| [ADR-0030](0030-use-context-aware-plant-colors.md) | Use context-aware plant colors | Accepted |
 
 ## Interview Use
 

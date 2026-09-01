@@ -83,6 +83,8 @@ class Planting(Base):
     external_id: Mapped[str] = mapped_column(String(120))
     position: Mapped[int] = mapped_column(Integer)
     common_name: Mapped[str] = mapped_column(String(200))
+    plant_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    variety: Mapped[str | None] = mapped_column(String(200), nullable=True)
     crop_family: Mapped[str] = mapped_column(String(32))
     quantity: Mapped[int] = mapped_column(Integer)
     planting_date: Mapped[date] = mapped_column(Date)

@@ -509,8 +509,7 @@ select {
   font-weight: 600;
 }
 
-.dashboard-heading,
-.selected-garden-actions {
+.dashboard-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -522,8 +521,7 @@ select {
   padding-bottom: 18px;
 }
 
-.dashboard-heading h2,
-.selected-garden-actions h2 {
+.dashboard-heading h2 {
   margin: 0;
   color: #183a2a;
   font-size: 24px;
@@ -586,23 +584,6 @@ select {
 .garden-card-details span {
   color: #657268;
   font-size: 14px;
-}
-
-.selected-garden-actions {
-  border: 1px solid #cfd7ce;
-  border-radius: 8px;
-  padding: 20px;
-  background: #ffffff;
-}
-
-.selected-garden-actions .section-eyebrow {
-  margin-bottom: 6px;
-}
-
-.dashboard-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
 }
 
 .dashboard-module-actions {
@@ -734,6 +715,43 @@ select {
   gap: 24px;
   align-items: start;
   margin-top: 24px;
+}
+
+.plan-view {
+  min-width: 0;
+}
+
+.plan-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.plan-zoom-controls span {
+  min-width: 42px;
+  color: #657268;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plan-zoom-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 0;
+  background: #ffffff;
+  color: #183a2a;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.plan-zoom-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .plan-canvas-wrap {
@@ -1124,6 +1142,13 @@ select {
   color: #1d2920;
 }
 
+.allocation-form input[type="color"],
+.selected-fields input[type="color"] {
+  width: 52px;
+  min-height: 42px;
+  padding: 4px;
+}
+
 .layout-editor-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.8fr);
@@ -1251,16 +1276,14 @@ select {
   .care-form,
   .care-completion-form,
   .plan-dimensions,
-  .layout-dimensions,
-  .selected-garden-actions {
+  .layout-dimensions {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
   .operations-header-active,
   .section-header,
-  .care-completion-form,
-  .selected-garden-actions {
+  .care-completion-form {
     display: grid;
   }
 

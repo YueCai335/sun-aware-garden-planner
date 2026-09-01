@@ -18,6 +18,8 @@ import {
   growingAreaKinds,
   plantingCropFamilies,
   plantingCropFamilyLabels,
+  plantDisplayName,
+  plantTypeSuggestions,
   readGardenWorkspace,
   todayDate,
   type Garden,
@@ -599,7 +601,8 @@ export function GardenWorkspace() {
 
   const openEditPlanting = (planting: PlantingRecord) => {
     setPlantingForm({
-      commonName: planting.commonName,
+      plantType: planting.plantType ?? planting.commonName,
+      variety: planting.variety ?? "",
       cropFamily: planting.cropFamily,
       quantity: String(planting.quantity),
       plantingDate: planting.plantingDate,
@@ -614,9 +617,11 @@ export function GardenWorkspace() {
   const savePlanting = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!garden) return;
-    const commonName = plantingForm.commonName.trim();
+    const plantType = plantingForm.plantType.trim();
+    const variety = plantingForm.variety.trim();
+    const commonName = plantDisplayName({ plantType, variety, fallback: plantType });
     const quantity = Number(plantingForm.quantity);
-    if (!commonName) return setMessage("Enter a plant name.");
+    if (!plantType) return setMessage("Enter a plant type.");
     if (
       !plantingForm.cropFamily ||
       !plantingCropFamilies.includes(plantingForm.cropFamily)
@@ -636,6 +641,8 @@ export function GardenWorkspace() {
     const planting: PlantingRecord = {
       id: editingPlantingId ?? createId("planting"),
       commonName,
+      plantType,
+      ...(variety ? { variety } : {}),
       cropFamily: plantingForm.cropFamily,
       quantity,
       plantingDate: plantingForm.plantingDate,
@@ -1267,6 +1274,12 @@ function Home({
                 onSelectGarden(candidate.id);
                 onManage(candidate.id);
               }}
+              onKeyDown={(event) => {
+                if (selected && (event.key === "Enter" || event.key === " ")) {
+                  event.preventDefault();
+                  onManage(candidate.id);
+                }
+              }}
               type="button"
             >
               <GardenPlanOverview
@@ -1285,17 +1298,6 @@ function Home({
           );
         })}
       </div>
-      <section className="selected-garden-actions" aria-labelledby="selected-garden-heading">
-        <div>
-          <p className="section-eyebrow">Selected garden</p>
-          <h2 id="selected-garden-heading">{garden.name}</h2>
-        </div>
-        <div className="dashboard-actions">
-          <button className="secondary-button" onClick={() => onManage()} type="button">
-            Edit garden
-          </button>
-        </div>
-      </section>
       <section className="dashboard-module-actions" aria-label="Garden tools">
         <button className="primary-button" onClick={onPlanSeason} type="button">
           Plan next season
@@ -2289,21 +2291,42 @@ function PlantingManagement({
           Add plant
         </button>
       </div>
+      <datalist id="planting-plant-type-suggestions">
+        {plantTypeSuggestions.map((plantType) => (
+          <option key={plantType} value={plantType} />
+        ))}
+      </datalist>
       {isOpen ? (
         <form className="planting-form" onSubmit={onSave}>
           <h3>{editingPlantingId ? "Edit plant" : "Add plant"}</h3>
           <div className="field">
-            <label htmlFor="planting-common-name">Plant name</label>
+            <label htmlFor="planting-plant-type">Plant type</label>
             <input
               autoFocus
-              id="planting-common-name"
+              id="planting-plant-type"
+              list="planting-plant-type-suggestions"
               onChange={(event) =>
                 setPlantingForm({
                   ...plantingForm,
-                  commonName: event.target.value,
+                  plantType: event.target.value,
                 })
               }
-              value={plantingForm.commonName}
+              placeholder="e.g. Tomato or 番茄"
+              value={plantingForm.plantType}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="planting-variety">Variety (optional)</label>
+            <input
+              id="planting-variety"
+              onChange={(event) =>
+                setPlantingForm({
+                  ...plantingForm,
+                  variety: event.target.value,
+                })
+              }
+              placeholder="e.g. Sun Gold"
+              value={plantingForm.variety}
             />
           </div>
           <div className="field">
@@ -2395,7 +2418,7 @@ function PlantingManagement({
               {records.map((planting) => (
                     <li key={planting.id}>
                       <div>
-                        <strong>{planting.commonName}</strong>
+                        <strong>{plantDisplayName({ plantType: planting.plantType, variety: planting.variety, fallback: planting.commonName })}</strong>
                         <p>
                           {plantingCropFamilyLabels[planting.cropFamily]} ·{" "}
                           {planting.quantity} · {planting.plantingDate} ·{" "}
@@ -2466,7 +2489,8 @@ function Status({ message }: { message: string }) {
 }
 
 type PlantingForm = {
-  commonName: string;
+  plantType: string;
+  variety: string;
   cropFamily: PlantingCropFamily | "";
   quantity: string;
   plantingDate: string;
@@ -2498,7 +2522,8 @@ type CareTaskForm = {
 
 function emptyPlantingForm(): PlantingForm {
   return {
-    commonName: "",
+    plantType: "",
+    variety: "",
     cropFamily: "",
     quantity: "",
     plantingDate: "",
@@ -2548,7 +2573,7 @@ function plantGroupDisplayName(planting: PlantingRecord, garden: Garden) {
   const area = garden.growingAreas.find(
     (candidate) => candidate.id === planting.growingAreaId,
   );
-  return `${planting.commonName} · ${area?.name ?? "Planting area"}`;
+  return `${plantDisplayName({ plantType: planting.plantType, variety: planting.variety, fallback: planting.commonName })} · ${area?.name ?? "Planting area"}`;
 }
 
 function careFertilizerDetails(event: CareEvent) {

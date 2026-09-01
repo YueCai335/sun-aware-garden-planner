@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   careTaskStatus,
+  allocationPlantColor,
   clampAllocationCenter,
   clampPlanPosition,
   createRectangularLayout,
+  defaultPlantColor,
   defaultPlanPlacement,
   findDuplicatePlantPosition,
+  isPlantColor,
+  plantDisplayName,
   normalizePlanRotation,
   readGardenWorkspace,
   snapToGrid,
@@ -504,6 +508,28 @@ describe("readGardenWorkspace", () => {
       x: 1.1,
       y: 0.5,
     });
+  });
+
+  it("uses bilingual plant types, varied automatic colors, and manual overrides", () => {
+    expect(defaultPlantColor("Tomato")).toBe("#d9534f");
+    expect(defaultPlantColor("番茄", "Sun Gold")).toBe("#d9534f");
+    expect(defaultPlantColor("茄子")).toBe("#76529a");
+    expect(defaultPlantColor("林荫鼠尾草")).toBe("#8a62ad");
+    expect(defaultPlantColor("圆锥绣球")).toBe("#d17e9c");
+    expect(defaultPlantColor("Unknown perennial")).not.toBe(defaultPlantColor("Another unknown perennial"));
+    const allocations = [
+      { id: "tomato", label: "Tomato", plantType: "Tomato", x: 0.5, y: 0.5, diameterMeters: 0.3 },
+      { id: "sun-gold", label: "Sun Gold", plantType: "Sun Gold", x: 1, y: 0.5, diameterMeters: 0.3 },
+      { id: "sage-1", label: "Meadow sage", plantType: "Meadow sage", x: 1.5, y: 0.5, diameterMeters: 0.3 },
+      { id: "sage-2", label: "Meadow sage · Caradonna", plantType: "Meadow sage", variety: "Caradonna", x: 2, y: 0.5, diameterMeters: 0.3 },
+      { id: "manual", label: "Custom color", plantType: "Custom color", color: "#1f77b4", x: 2.5, y: 0.5, diameterMeters: 0.3 },
+    ];
+    expect(allocationPlantColor(allocations[0], allocations)).not.toBe(allocationPlantColor(allocations[1], allocations));
+    expect(allocationPlantColor(allocations[2], allocations)).toBe(allocationPlantColor(allocations[3], allocations));
+    expect(allocationPlantColor(allocations[4], allocations)).toBe("#1f77b4");
+    expect(plantDisplayName({ plantType: "Tomato", variety: "Sun Gold", fallback: "Tomato" })).toBe("Tomato · Sun Gold");
+    expect(isPlantColor("#d9534f")).toBe(true);
+    expect(isPlantColor("tomato")).toBe(false);
   });
 
   it("calculates task status and repeat dates from calendar dates", () => {

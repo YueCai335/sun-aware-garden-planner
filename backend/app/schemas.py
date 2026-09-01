@@ -28,6 +28,9 @@ class PlanPlacement(ApiModel):
 class PlantAllocation(ApiModel):
     id: str = Field(min_length=1, max_length=120)
     label: str = Field(min_length=1, max_length=200)
+    plant_type: str | None = Field(default=None, min_length=1, max_length=200, serialization_alias="plantType", validation_alias="plantType")
+    variety: str | None = Field(default=None, max_length=200)
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     x: float
     y: float
     diameter_meters: float = Field(gt=0, serialization_alias="diameterMeters", validation_alias="diameterMeters")
@@ -62,6 +65,8 @@ class GrowingAreaInput(ApiModel):
 class PlantingInput(ApiModel):
     id: str = Field(min_length=1, max_length=120)
     common_name: str = Field(min_length=1, max_length=200, serialization_alias="commonName", validation_alias="commonName")
+    plant_type: str | None = Field(default=None, min_length=1, max_length=200, serialization_alias="plantType", validation_alias="plantType")
+    variety: str | None = Field(default=None, max_length=200)
     crop_family: CropFamily = Field(serialization_alias="cropFamily", validation_alias="cropFamily")
     quantity: int = Field(gt=0)
     planting_date: date = Field(serialization_alias="plantingDate", validation_alias="plantingDate")

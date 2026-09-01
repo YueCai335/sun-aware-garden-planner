@@ -5,6 +5,7 @@ import { Circle, Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 
 import {
+  allocationPlantColor,
   clampPlanPosition,
   normalizePlanRotation,
   snapToGrid,
@@ -25,6 +26,7 @@ type GardenPlanOverviewProps = {
 };
 
 const CANVAS_PADDING = 34;
+const PLAN_ZOOM_LEVELS = [0.75, 1, 1.25, 1.5, 2];
 
 export function GardenPlanOverview({
   plan,
@@ -38,6 +40,8 @@ export function GardenPlanOverview({
   const [width, setWidth] = useState(String(plan.widthMeters));
   const [depth, setDepth] = useState(String(plan.depthMeters));
   const [selectedAreaId, setSelectedAreaId] = useState<string>();
+  const [selectedAllocationId, setSelectedAllocationId] = useState<string>();
+  const [zoom, setZoom] = useState(1);
   const [message, setMessage] = useState("");
   const selectedArea = growingAreas.find((area) => area.id === selectedAreaId);
 
@@ -54,6 +58,16 @@ export function GardenPlanOverview({
       setSelectedAreaId(undefined);
   }, [growingAreas, selectedAreaId]);
 
+  useEffect(() => {
+    if (
+      selectedAllocationId &&
+      !growingAreas.some((area) => area.layout?.allocations.some(
+        (allocation) => allocationKey(area.id, allocation.id) === selectedAllocationId,
+      ))
+    )
+      setSelectedAllocationId(undefined);
+  }, [growingAreas, selectedAllocationId]);
+
   if (compact)
     return (
       <div aria-hidden="true" className="garden-plan-thumbnail">
@@ -64,6 +78,7 @@ export function GardenPlanOverview({
           onMove={() => undefined}
           onSelect={() => undefined}
           plan={plan}
+          zoom={1}
         />
       </div>
     );
@@ -114,8 +129,8 @@ export function GardenPlanOverview({
     if (!editable || !onPlacementChange) return;
     const point = clampPlanPosition(
       {
-        x: (event.target.x() - CANVAS_PADDING) / pixelsPerMeter(plan),
-        y: (event.target.y() - CANVAS_PADDING) / pixelsPerMeter(plan),
+        x: (event.target.x() - CANVAS_PADDING) / (pixelsPerMeter(plan) * zoom),
+        y: (event.target.y() - CANVAS_PADDING) / (pixelsPerMeter(plan) * zoom),
       },
       plan,
     );
@@ -124,6 +139,12 @@ export function GardenPlanOverview({
     onPlacementChange(areaId, { ...area.planPlacement, ...point });
     setSelectedAreaId(areaId);
     setMessage("Planting area snapped to the 0.1 metre grid.");
+  };
+
+  const changeZoom = (direction: -1 | 1) => {
+    const currentIndex = PLAN_ZOOM_LEVELS.indexOf(zoom);
+    const nextIndex = Math.max(0, Math.min(PLAN_ZOOM_LEVELS.length - 1, currentIndex + direction));
+    setZoom(PLAN_ZOOM_LEVELS[nextIndex]);
   };
 
   return (
@@ -173,16 +194,45 @@ export function GardenPlanOverview({
         </form>
       ) : null}
       <div className={editable ? "garden-plan-grid" : "plan-canvas-wrap"}>
-        <div className="plan-canvas-wrap">
-          <GardenPlanCanvas
-            compact={false}
-            growingAreas={growingAreas}
-            interactive={editable}
-            onEditLayout={onEditLayout}
-            onMove={moveArea}
-            onSelect={setSelectedAreaId}
-            plan={plan}
-          />
+        <div className="plan-view">
+          <div aria-label="Garden Plan zoom" className="plan-zoom-controls">
+            <button
+              aria-label="Zoom out"
+              className="plan-zoom-icon"
+              disabled={zoom === PLAN_ZOOM_LEVELS[0]}
+              onClick={() => changeZoom(-1)}
+              type="button"
+            >
+              −
+            </button>
+            <button className="secondary-button" onClick={() => setZoom(1)} type="button">
+              Fit plan
+            </button>
+            <button
+              aria-label="Zoom in"
+              className="plan-zoom-icon"
+              disabled={zoom === PLAN_ZOOM_LEVELS[PLAN_ZOOM_LEVELS.length - 1]}
+              onClick={() => changeZoom(1)}
+              type="button"
+            >
+              +
+            </button>
+            <span>{Math.round(zoom * 100)}%</span>
+          </div>
+          <div className="plan-canvas-wrap">
+            <GardenPlanCanvas
+              compact={false}
+              growingAreas={growingAreas}
+              interactive={editable}
+              onEditLayout={onEditLayout}
+              onMove={moveArea}
+              onSelect={setSelectedAreaId}
+              onSelectAllocation={setSelectedAllocationId}
+              plan={plan}
+              selectedAllocationId={selectedAllocationId}
+              zoom={zoom}
+            />
+          </div>
         </div>
         {editable ? (
           <aside className="plan-controls" aria-label="Garden Plan controls">
@@ -283,7 +333,10 @@ type GardenPlanCanvasProps = {
   interactive: boolean;
   onMove: (areaId: string, event: KonvaEventObject<DragEvent>) => void;
   onSelect: (areaId: string) => void;
+  onSelectAllocation?: (allocationId: string) => void;
   onEditLayout?: (areaId: string) => void;
+  selectedAllocationId?: string;
+  zoom: number;
 };
 
 function GardenPlanCanvas({
@@ -293,10 +346,13 @@ function GardenPlanCanvas({
   interactive,
   onMove,
   onSelect,
+  onSelectAllocation,
   onEditLayout,
+  selectedAllocationId,
+  zoom,
 }: GardenPlanCanvasProps) {
   const padding = compact ? 14 : CANVAS_PADDING;
-  const scale = pixelsPerMeter(plan, compact);
+  const scale = pixelsPerMeter(plan, compact) * zoom;
   const width = plan.widthMeters * scale + padding * 2;
   const height = plan.depthMeters * scale + padding * 2;
   const verticalGrid = compact ? [] : Array.from(
@@ -402,39 +458,65 @@ function GardenPlanCanvas({
             {area.layout!.allocations.map((allocation) => (
               <Group key={allocation.id}>
                 <Circle
-                  fill="#f7b955"
+                  aria-label={`${allocation.label} plant on Garden Plan`}
+                  fill={allocationPlantColor(allocation, area.layout!.allocations)}
                   opacity={0.9}
                   radius={Math.max(4, (allocation.diameterMeters * scale) / 2)}
-                  stroke="#8a4f00"
-                  strokeWidth={1}
+                  stroke="#183a2a"
+                  strokeWidth={selectedAllocationId === allocationKey(area.id, allocation.id) ? 3 : 1}
                   x={allocation.x * scale}
                   y={allocation.y * scale}
+                  onClick={(event) => {
+                    event.cancelBubble = true;
+                    onSelect(area.id);
+                    onSelectAllocation?.(allocationKey(area.id, allocation.id));
+                  }}
+                  onTap={(event) => {
+                    event.cancelBubble = true;
+                    onSelect(area.id);
+                    onSelectAllocation?.(allocationKey(area.id, allocation.id));
+                  }}
                 />
-                {!compact ? (
+                {!compact && (zoom > 1 || selectedAllocationId === allocationKey(area.id, allocation.id)) ? (
                   <Text
-                    fill="#4a2b00"
-                    fontSize={11}
+                    align="center"
+                    fill="#183a2a"
+                    fontSize={Math.max(8, Math.min(12, allocation.diameterMeters * scale / 3))}
+                    height={Math.max(2, allocation.diameterMeters * scale)}
                     listening={false}
                     text={allocation.label}
-                    x={allocation.x * scale + 5}
-                    y={allocation.y * scale + 4}
+                    verticalAlign="middle"
+                    width={Math.max(2, allocation.diameterMeters * scale)}
+                    wrap="none"
+                    x={allocation.x * scale - allocation.diameterMeters * scale / 2}
+                    y={allocation.y * scale - allocation.diameterMeters * scale / 2}
                   />
                 ) : null}
               </Group>
             ))}
-            {!compact ? (
-              <Text
-                fill="#183a2a"
-                fontSize={13}
-                fontStyle="bold"
-                listening={false}
-                text={area.name}
-                x={6}
-                y={6}
-              />
-            ) : null}
           </Group>
         ))}
+        {!compact && measuredAreas.map((area) => {
+          const label = areaLabelPosition(area, scale, padding);
+          return (
+            <Text
+              align="center"
+              data-testid={`area-label-${area.id}`}
+              ellipsis
+              fill="#183a2a"
+              fontSize={13}
+              fontStyle="bold"
+              height={16}
+              key={`area-label-${area.id}`}
+              listening={false}
+              text={area.name}
+              width={label.width}
+              wrap="none"
+              x={label.x}
+              y={label.y}
+            />
+          );
+        })}
         {!compact && !measuredAreas.length ? (
           <Text
             fill="#657268"
@@ -447,6 +529,29 @@ function GardenPlanCanvas({
       </Layer>
     </Stage>
   );
+}
+
+function allocationKey(areaId: string, allocationId: string) {
+  return `${areaId}:${allocationId}`;
+}
+
+function areaLabelPosition(area: GrowingArea, scale: number, padding: number) {
+  const angle = (area.planPlacement.rotationDegrees * Math.PI) / 180;
+  const origin = {
+    x: padding + area.planPlacement.x * scale,
+    y: padding + area.planPlacement.y * scale,
+  };
+  const points = area.layout!.boundary.map((point) => ({
+    x: origin.x + point.x * scale * Math.cos(angle) - point.y * scale * Math.sin(angle),
+    y: origin.y + point.x * scale * Math.sin(angle) + point.y * scale * Math.cos(angle),
+  }));
+  const left = Math.min(...points.map((point) => point.x));
+  const right = Math.max(...points.map((point) => point.x));
+  const top = Math.min(...points.map((point) => point.y));
+  const bottom = Math.max(...points.map((point) => point.y));
+  const width = Math.max(80, Math.min(180, right - left + 24));
+  const y = top - 20 >= 24 ? top - 20 : bottom + 6;
+  return { width, x: (left + right - width) / 2, y };
 }
 
 function pixelsPerMeter(plan: GardenPlan, compact = false) {

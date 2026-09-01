@@ -14,10 +14,108 @@ export type PlanPlacement = { x: number; y: number; rotationDegrees: number };
 export type PlantAllocation = {
   id: string;
   label: string;
+  plantType?: string;
+  variety?: string;
+  color?: string;
   x: number;
   y: number;
   diameterMeters: number;
 };
+
+const plantAppearanceDefaults = [
+  { name: "Tomato", aliases: ["tomato", "tomatoes", "番茄", "西红柿", "sungold", "sun gold"], color: "#d9534f" },
+  { name: "Pepper", aliases: ["pepper", "辣椒", "甜椒", "彩椒"], color: "#e06a43" },
+  { name: "Eggplant", aliases: ["eggplant", "茄子"], color: "#76529a" },
+  { name: "Marigold", aliases: ["marigold", "万寿菊"], color: "#e69a32" },
+  { name: "Sunflower", aliases: ["sunflower", "向日葵"], color: "#e2b52e" },
+  { name: "Meadow sage", aliases: ["meadow sage", "salvia", "sage", "林荫鼠尾草", "鼠尾草"], color: "#8a62ad" },
+  { name: "Panicle hydrangea", aliases: ["panicle hydrangea", "hydrangea", "圆锥绣球", "绣球"], color: "#d17e9c" },
+  { name: "Squash", aliases: ["squash", "pumpkin", "南瓜", "西葫芦"], color: "#d88a38" },
+  { name: "Bean", aliases: ["bean", "beans", "豆角", "四季豆"], color: "#4e9b78" },
+  { name: "Pea", aliases: ["pea", "peas", "豌豆"], color: "#7ca64b" },
+  { name: "Lettuce", aliases: ["lettuce", "生菜"], color: "#86ad5f" },
+  { name: "Kale", aliases: ["kale", "羽衣甘蓝"], color: "#3e7457" },
+  { name: "Basil", aliases: ["basil", "罗勒"], color: "#519a55" },
+  { name: "Cucumber", aliases: ["cucumber", "黄瓜"], color: "#3d9881" },
+] as const;
+
+const fallbackPlantColors = [
+  "#3d9881",
+  "#5f84b8",
+  "#76529a",
+  "#c66b86",
+  "#d88a38",
+  "#7ca64b",
+] as const;
+
+export const plantTypeSuggestions = plantAppearanceDefaults.map(({ name }) => name);
+
+export function defaultPlantColor(plantType: string, variety = "") {
+  const normalized = `${plantType} ${variety}`.trim().toLowerCase();
+  return plantAppearanceDefaults.find(({ aliases }) => aliases.some((alias) => normalized.includes(alias)))?.color ?? fallbackPlantColors[colorIndex(normalized)];
+}
+
+export function allocationPlantColor(
+  allocation: PlantAllocation,
+  allocations: PlantAllocation[],
+) {
+  if (allocation.color) return allocation.color;
+
+  const automaticAllocations = allocations.filter((candidate) => !candidate.color);
+  const identities = [...new Set(automaticAllocations.map(allocationIdentity))].sort();
+  const reservedColors = new Set(
+    allocations.flatMap((candidate) => (candidate.color ? [candidate.color] : [])),
+  );
+  const colorsByIdentity = new Map<string, string>();
+
+  for (const identity of identities) {
+    const sample = automaticAllocations.find(
+      (candidate) => allocationIdentity(candidate) === identity,
+    );
+    if (!sample) continue;
+    const preferred = defaultPlantColor(
+      sample.plantType ?? sample.label,
+      sample.variety,
+    );
+    const color = [preferred, ...fallbackPlantColors].find(
+      (candidate) => !reservedColors.has(candidate),
+    ) ?? preferred;
+    colorsByIdentity.set(identity, color);
+    reservedColors.add(color);
+  }
+
+  return colorsByIdentity.get(allocationIdentity(allocation)) ?? defaultPlantColor(
+    allocation.plantType ?? allocation.label,
+    allocation.variety,
+  );
+}
+
+function allocationIdentity(allocation: PlantAllocation) {
+  return (allocation.plantType ?? allocation.label).trim().toLocaleLowerCase();
+}
+
+function colorIndex(value: string) {
+  let total = 0;
+  for (const character of value) total = (total * 31 + character.charCodeAt(0)) >>> 0;
+  return total % fallbackPlantColors.length;
+}
+
+export function plantDisplayName({
+  plantType,
+  variety,
+  fallback,
+}: {
+  plantType?: string;
+  variety?: string;
+  fallback: string;
+}) {
+  const type = plantType?.trim() || fallback;
+  return variety?.trim() ? `${type} · ${variety.trim()}` : type;
+}
+
+export function isPlantColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
+}
 export type GrowingAreaLayout = {
   widthMeters: number;
   depthMeters: number;
@@ -47,6 +145,8 @@ export type PlantingCropFamily = (typeof plantingCropFamilies)[number];
 export type PlantingRecord = {
   id: string;
   commonName: string;
+  plantType?: string;
+  variety?: string;
   cropFamily: PlantingCropFamily;
   quantity: number;
   plantingDate: string;
@@ -219,6 +319,7 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
             {
               id: "demo-tomato",
               label: "Tomato",
+              plantType: "Tomato",
               x: 0.6,
               y: 0.6,
               diameterMeters: 0.6,
@@ -245,6 +346,8 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
       {
         id: "demo-planting-tomatoes",
         commonName: "Tomatoes",
+        plantType: "Tomato",
+        variety: "Sun Gold",
         cropFamily: "nightshade",
         quantity: 4,
         plantingDate: "2026-05-18",
@@ -254,6 +357,8 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
       {
         id: "demo-planting-beans",
         commonName: "Bush beans",
+        plantType: "Bean",
+        variety: "Bush bean",
         cropFamily: "legume",
         quantity: 12,
         plantingDate: "2026-05-24",
@@ -829,17 +934,24 @@ function isPoint(value: unknown): value is LayoutPoint {
 }
 
 function isAllocation(value: unknown): value is PlantAllocation {
+  const allocation = value as Partial<PlantAllocation>;
   return Boolean(
     value &&
       typeof value === "object" &&
-      typeof (value as PlantAllocation).id === "string" &&
-      (value as PlantAllocation).id.trim() &&
-      typeof (value as PlantAllocation).label === "string" &&
-      (value as PlantAllocation).label.trim() &&
-      Number.isFinite((value as PlantAllocation).x) &&
-      Number.isFinite((value as PlantAllocation).y) &&
-      Number.isFinite((value as PlantAllocation).diameterMeters) &&
-      (value as PlantAllocation).diameterMeters > 0,
+      typeof allocation.id === "string" &&
+      allocation.id.trim() &&
+      typeof allocation.label === "string" &&
+      allocation.label.trim() &&
+      (allocation.plantType === undefined ||
+        (typeof allocation.plantType === "string" &&
+          Boolean(allocation.plantType.trim()))) &&
+      (allocation.variety === undefined || typeof allocation.variety === "string") &&
+      (allocation.color === undefined || isPlantColor(allocation.color)) &&
+      Number.isFinite(allocation.x) &&
+      Number.isFinite(allocation.y) &&
+      typeof allocation.diameterMeters === "number" &&
+      Number.isFinite(allocation.diameterMeters) &&
+      allocation.diameterMeters > 0,
   );
 }
 
@@ -851,6 +963,10 @@ function isPlantingRecord(value: unknown): value is PlantingRecord {
     Boolean(planting.id.trim()) &&
     typeof planting.commonName === "string" &&
     Boolean(planting.commonName.trim()) &&
+    (planting.plantType === undefined ||
+      (typeof planting.plantType === "string" &&
+        Boolean(planting.plantType.trim()))) &&
+    (planting.variety === undefined || typeof planting.variety === "string") &&
     Boolean(
       planting.cropFamily && plantingCropFamilies.includes(planting.cropFamily),
     ) &&

@@ -5,13 +5,13 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect
 
 
-def test_initial_migration_creates_garden_operations_schema(tmp_path):
+def test_migrations_create_garden_operations_schema_and_plant_identity_fields(tmp_path):
     database_path = tmp_path / "garden.db"
     config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", f"sqlite+pysqlite:///{database_path}")
 
     command.upgrade(config, "head")
 
-    assert {"workspaces", "gardens", "growing_areas", "plantings", "care_events", "care_tasks"} <= set(
-        inspect(create_engine(f"sqlite+pysqlite:///{database_path}")).get_table_names()
-    )
+    inspector = inspect(create_engine(f"sqlite+pysqlite:///{database_path}"))
+    assert {"workspaces", "gardens", "growing_areas", "plantings", "care_events", "care_tasks"} <= set(inspector.get_table_names())
+    assert {"plant_type", "variety"} <= {column["name"] for column in inspector.get_columns("plantings")}

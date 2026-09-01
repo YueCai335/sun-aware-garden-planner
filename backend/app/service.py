@@ -153,7 +153,7 @@ def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
                 plan_x=area_input.plan_placement.x,
                 plan_y=area_input.plan_placement.y,
                 plan_rotation_degrees=area_input.plan_placement.rotation_degrees,
-                layout=area_input.layout.model_dump(by_alias=True) if area_input.layout else None,
+                layout=area_input.layout.model_dump(by_alias=True, exclude_none=True) if area_input.layout else None,
             )
             garden.growing_areas.append(area)
             areas[area_input.id] = area
@@ -163,6 +163,8 @@ def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
                     external_id=planting_input.id,
                     position=position,
                     common_name=planting_input.common_name,
+                    plant_type=planting_input.plant_type,
+                    variety=planting_input.variety,
                     crop_family=planting_input.crop_family,
                     quantity=planting_input.quantity,
                     planting_date=planting_input.planting_date,
@@ -238,6 +240,8 @@ def garden_response(garden: Garden) -> dict:
             {
                 "id": planting.external_id,
                 "commonName": planting.common_name,
+                **({"plantType": planting.plant_type} if planting.plant_type is not None else {}),
+                **({"variety": planting.variety} if planting.variety is not None else {}),
                 "cropFamily": planting.crop_family,
                 "quantity": planting.quantity,
                 "plantingDate": planting.planting_date.isoformat(),
