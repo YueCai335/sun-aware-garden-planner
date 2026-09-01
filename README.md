@@ -152,6 +152,7 @@ npm test
 
 ## Local Backend Foundation
 
-The FastAPI and PostgreSQL foundation supports an explicit, one-time import of
-a browser workspace. Its setup, REST endpoints, and local verification steps
-are in [Backend Foundation](backend/README.md).
+The FastAPI and PostgreSQL workspace sync starts with an explicit import from
+the browser. Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` when the API runs
+somewhere other than `http://localhost:8000`. Its setup and REST endpoints are
+in [Backend Foundation](backend/README.md).

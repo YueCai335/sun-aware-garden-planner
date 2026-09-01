@@ -33,6 +33,14 @@ import {
   type PlantingCropFamily,
   type PlantingRecord,
 } from "@/lib/gardenWorkspace";
+import {
+  importServerWorkspace,
+  loadServerWorkspace,
+  saveServerWorkspace,
+} from "@/lib/gardenWorkspaceApi";
+
+export const SERVER_WORKSPACE_STORAGE_KEY =
+  "sun-aware-garden-planner:server-workspace-id:v1";
 
 export function GardenWorkspace() {
   const [workspace, setWorkspace] = useState<GardenWorkspace>();
@@ -61,36 +69,84 @@ export function GardenWorkspace() {
   const [completionDate, setCompletionDate] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
   const [message, setMessage] = useState("");
+  const [storageSource, setStorageSource] = useState<"browser" | "server">("browser");
+  const [serverWorkspaceId, setServerWorkspaceId] = useState<string>();
+  const [isImporting, setIsImporting] = useState(false);
+  const [serverLoadFailed, setServerLoadFailed] = useState(false);
   const gardenManagementHeadingRef = useRef<HTMLHeadingElement>(null);
   const careLogHeadingRef = useRef<HTMLHeadingElement>(null);
+  const queuedServerWorkspaceRef = useRef<string | undefined>(undefined);
+  const serverSaveQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY);
-      const restored = readGardenWorkspace(saved);
-      if (restored) {
-        setWorkspace(restored);
-        setMessage("Gardens restored from this browser.");
-      } else if (saved) {
-        setMessage("Saved garden data could not be loaded.");
+    let active = true;
+    const restoreWorkspace = async () => {
+      try {
+        const savedServerWorkspaceId = window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY);
+        if (savedServerWorkspaceId) {
+          setStorageSource("server");
+          setServerWorkspaceId(savedServerWorkspaceId);
+          try {
+            const serverWorkspace = await loadServerWorkspace(savedServerWorkspaceId);
+            const restored = readGardenWorkspace(JSON.stringify(serverWorkspace));
+            if (!restored) throw new Error("Invalid server workspace");
+            if (!active) return;
+            queuedServerWorkspaceRef.current = JSON.stringify(restored);
+            setWorkspace(restored);
+            setMessage("Gardens restored from PostgreSQL.");
+          } catch {
+            if (!active) return;
+            setServerLoadFailed(true);
+            setMessage("PostgreSQL could not load this garden workspace. Check the API, then try again.");
+          }
+          return;
+        }
+        const saved = window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY);
+        const restored = readGardenWorkspace(saved);
+        if (restored) {
+          setWorkspace(restored);
+          setMessage("Gardens restored from this browser.");
+        } else if (saved) {
+          setMessage("Saved garden data could not be loaded.");
+        }
+      } catch {
+        if (active) setMessage("This browser's garden storage is unavailable.");
+      } finally {
+        if (active) setIsLoaded(true);
       }
-    } catch {
-      setMessage("This browser's garden storage is unavailable.");
-    }
-    setIsLoaded(true);
+    };
+    void restoreWorkspace();
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
     if (!isLoaded || !workspace) return;
-    try {
-      window.localStorage.setItem(
-        GARDEN_WORKSPACE_STORAGE_KEY,
-        JSON.stringify(workspace),
-      );
-    } catch {
-      setMessage("Changes could not be saved in this browser.");
+    if (storageSource === "browser") {
+      try {
+        window.localStorage.setItem(
+          GARDEN_WORKSPACE_STORAGE_KEY,
+          JSON.stringify(workspace),
+        );
+      } catch {
+        setMessage("Changes could not be saved in this browser.");
+      }
+      return;
     }
-  }, [isLoaded, workspace]);
+    if (!serverWorkspaceId) return;
+    const snapshot = JSON.stringify(workspace);
+    if (snapshot === queuedServerWorkspaceRef.current) return;
+    queuedServerWorkspaceRef.current = snapshot;
+    serverSaveQueueRef.current = serverSaveQueueRef.current.then(async () => {
+      try {
+        await saveServerWorkspace(serverWorkspaceId, workspace);
+        setMessage("Changes saved to PostgreSQL.");
+      } catch {
+        setMessage("Changes could not be saved to PostgreSQL. Keep this page open and make another change after the API recovers.");
+      }
+    });
+  }, [isLoaded, serverWorkspaceId, storageSource, workspace]);
 
   const garden = workspace?.gardens.find(
     (candidate) => candidate.id === workspace.selectedGardenId,
@@ -244,6 +300,10 @@ export function GardenWorkspace() {
       (candidate) => candidate.id !== garden.id,
     );
     if (!gardens.length) {
+      if (storageSource === "server") {
+        setMessage("Add another garden before deleting the last PostgreSQL garden.");
+        return;
+      }
       window.localStorage.removeItem(GARDEN_WORKSPACE_STORAGE_KEY);
       setWorkspace(undefined);
       setIsManagement(false);
@@ -271,6 +331,29 @@ export function GardenWorkspace() {
     setRenameGardenName(demo.gardens[0].name);
     clearTransientState();
     setMessage("Demo garden loaded.");
+  };
+
+  const importBrowserWorkspace = async () => {
+    if (!workspace || storageSource === "server") return;
+    if (!window.confirm("Import these browser gardens to PostgreSQL? Later changes will save to PostgreSQL.")) return;
+    setIsImporting(true);
+    setMessage("Importing gardens to PostgreSQL...");
+    const workspaceId = `local-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+    try {
+      const imported = await importServerWorkspace(workspaceId, workspace);
+      const restored = readGardenWorkspace(JSON.stringify(imported));
+      if (!restored) throw new Error("Invalid server workspace");
+      window.localStorage.setItem(SERVER_WORKSPACE_STORAGE_KEY, workspaceId);
+      queuedServerWorkspaceRef.current = JSON.stringify(restored);
+      setServerWorkspaceId(workspaceId);
+      setStorageSource("server");
+      setWorkspace(restored);
+      setMessage("Gardens imported. PostgreSQL now saves this workspace.");
+    } catch {
+      setMessage("Import failed. Your browser gardens are still available.");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const openAreaForm = () => {
@@ -771,6 +854,8 @@ export function GardenWorkspace() {
         <p className="loading-state">Loading garden workspace...</p>
       </main>
     );
+  if (serverLoadFailed)
+    return <ServerWorkspaceUnavailable message={message} />;
   if (!workspace || !garden)
     return (
       <Onboarding
@@ -817,6 +902,10 @@ export function GardenWorkspace() {
           onAddGarden={openGardenSetup}
           onManage={openManagement}
           onSelectGarden={selectGarden}
+          onImport={importBrowserWorkspace}
+          isImporting={isImporting}
+          message={message}
+          storageSource={storageSource}
         />
       ) : isCareLog ? (
         <section className="operations-content">
@@ -1025,15 +1114,23 @@ function Home({
   gardens,
   onAddGarden,
   onCareLog,
+  onImport,
   onManage,
   onSelectGarden,
+  isImporting,
+  message,
+  storageSource,
 }: {
   garden: Garden;
   gardens: Garden[];
   onAddGarden: () => void;
   onCareLog: () => void;
+  onImport: () => void;
   onManage: (gardenId?: string) => void;
   onSelectGarden: (gardenId: string) => void;
+  isImporting: boolean;
+  message: string;
+  storageSource: "browser" | "server";
 }) {
   return (
     <section className="operations-content garden-dashboard">
@@ -1091,7 +1188,38 @@ function Home({
         </div>
       </section>
       <CareSummary garden={garden} />
+      <section className="care-summary" aria-labelledby="workspace-storage-heading">
+        <div>
+          <p className="section-eyebrow">Workspace storage</p>
+          <h2 id="workspace-storage-heading">{storageSource === "server" ? "PostgreSQL" : "This browser"}</h2>
+        </div>
+        {storageSource === "browser" ? (
+          <>
+            <p className="section-context">Import these gardens when your local API and PostgreSQL service are running.</p>
+            <button className="secondary-button" disabled={isImporting} onClick={onImport} type="button">
+              {isImporting ? "Importing gardens..." : "Import gardens to PostgreSQL"}
+            </button>
+          </>
+        ) : (
+          <p className="section-context">Changes to this workspace save to PostgreSQL.</p>
+        )}
+        <Status message={message} />
+      </section>
     </section>
+  );
+}
+
+function ServerWorkspaceUnavailable({ message }: { message: string }) {
+  return (
+    <main className="operations-shell">
+      <section className="garden-onboarding" aria-labelledby="server-workspace-heading">
+        <p className="section-eyebrow">Workspace storage</p>
+        <h1 id="server-workspace-heading">PostgreSQL workspace unavailable</h1>
+        <p>Start the local API and database, then reload this page.</p>
+        <button className="secondary-button" onClick={() => window.location.reload()} type="button">Try again</button>
+        <Status message={message} />
+      </section>
+    </main>
   );
 }
 

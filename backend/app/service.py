@@ -45,6 +45,28 @@ def import_workspace(session: Session, payload: WorkspaceImport) -> Workspace:
         import_hash=fingerprint,
     )
     session.add(workspace)
+    write_workspace(workspace, payload)
+    session.commit()
+    return load_workspace(session, payload.workspace_id)  # type: ignore[return-value]
+
+
+def update_workspace(session: Session, payload: WorkspaceImport) -> Workspace:
+    workspace = load_workspace(session, payload.workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    write_workspace(workspace, payload)
+    session.commit()
+    return load_workspace(session, payload.workspace_id)  # type: ignore[return-value]
+
+
+def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
+    workspace.schema_version = payload.version
+    workspace.selected_garden_external_id = payload.selected_garden_id
+    workspace.gardens.clear()
+    session = Session.object_session(workspace)
+    if session is None:
+        raise RuntimeError("Workspace must be attached to a session")
+    session.flush()
     for garden_position, garden_input in enumerate(payload.gardens):
         garden = Garden(
             external_id=garden_input.id,
@@ -107,8 +129,6 @@ def import_workspace(session: Session, payload: WorkspaceImport) -> Workspace:
                     **target_fields(task_input),
                 )
             )
-    session.commit()
-    return load_workspace(session, payload.workspace_id)  # type: ignore[return-value]
 
 
 def target_fields(record):

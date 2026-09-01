@@ -8,6 +8,7 @@ import {
   createDemoGardenWorkspace,
   GARDEN_WORKSPACE_STORAGE_KEY,
 } from "@/lib/gardenWorkspace";
+import { SERVER_WORKSPACE_STORAGE_KEY } from "@/components/GardenWorkspace";
 
 async function loadDemo(user: ReturnType<typeof userEvent.setup>) {
   render(<GardenWorkspace />);
@@ -20,6 +21,84 @@ async function openPlantingArea(user: ReturnType<typeof userEvent.setup>, name: 
 }
 
 describe("GardenWorkspace", () => {
+  it("imports browser gardens, reloads from PostgreSQL, and saves a later edit", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const workspace = createDemoGardenWorkspace();
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: async () => JSON.parse(String(init?.body ?? JSON.stringify({ workspaceId: "server-workspace", ...workspace }))),
+    }));
+    vi.stubGlobal("fetch", fetch);
+    window.localStorage.setItem(GARDEN_WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
+
+    const firstRender = render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Import gardens to PostgreSQL" }));
+    await screen.findByRole("heading", { name: "PostgreSQL" });
+    const importedPayload = JSON.parse(String(fetch.mock.calls[0][1]?.body));
+    expect(fetch.mock.calls[0][0]).toMatch(/\/import$/);
+    expect(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY)).toBe(JSON.stringify(workspace));
+    expect(window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY)).toBe(importedPayload.workspaceId);
+
+    await user.click(screen.getByRole("button", { name: "Edit garden" }));
+    await user.clear(screen.getByLabelText("Garden name"));
+    await user.type(screen.getByLabelText("Garden name"), "Server garden");
+    await user.click(screen.getByRole("button", { name: "Save garden name" }));
+    await waitFor(() => expect(fetch.mock.calls).toContainEqual([
+      expect.stringMatching(/\/workspaces\/local-/),
+      expect.objectContaining({ method: "PUT" }),
+    ]));
+
+    firstRender.unmount();
+    fetch.mockClear();
+    render(<GardenWorkspace />);
+    await screen.findByRole("heading", { name: "PostgreSQL" });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/workspaces\/local-/),
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    confirm.mockRestore();
+  });
+
+  it("keeps browser gardens active when PostgreSQL import fails", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const workspace = createDemoGardenWorkspace();
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, json: async () => ({}) })));
+    window.localStorage.setItem(GARDEN_WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
+
+    render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Import gardens to PostgreSQL" }));
+
+    expect(screen.getByText("Import failed. Your browser gardens are still available.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "This browser" })).toBeInTheDocument();
+    expect(window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY)).toBeNull();
+    confirm.mockRestore();
+  });
+
+  it("reports a PostgreSQL save failure without returning to browser storage", async () => {
+    const user = userEvent.setup();
+    const workspace = createDemoGardenWorkspace();
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: !init?.method,
+      json: async () => ({ workspaceId: "server-workspace", ...workspace }),
+    }));
+    vi.stubGlobal("fetch", fetch);
+    window.localStorage.setItem(GARDEN_WORKSPACE_STORAGE_KEY, JSON.stringify(workspace));
+    window.localStorage.setItem(SERVER_WORKSPACE_STORAGE_KEY, "server-workspace");
+
+    render(<GardenWorkspace />);
+    await screen.findByRole("heading", { name: "PostgreSQL" });
+    await user.click(screen.getByRole("button", { name: "Edit garden" }));
+    await user.clear(screen.getByLabelText("Garden name"));
+    await user.type(screen.getByLabelText("Garden name"), "Offline server garden");
+    await user.click(screen.getByRole("button", { name: "Save garden name" }));
+
+    await screen.findByText("Changes could not be saved to PostgreSQL. Keep this page open and make another change after the API recovers.");
+    expect(window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY)).toBe("server-workspace");
+    expect(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY)).toBe(JSON.stringify(workspace));
+  });
+
   it("uses single click for selection and double click or Edit garden for direct editing", async () => {
     const user = userEvent.setup();
     await loadDemo(user);

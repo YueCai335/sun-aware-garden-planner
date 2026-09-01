@@ -46,6 +46,10 @@ explicit-import boundary before the later server-backed frontend workflow.
 
 `GET /workspaces/{workspaceId}` returns the imported garden data.
 
+`PUT /workspaces/{workspaceId}` validates and saves a complete workspace after
+an import. It replaces the workspace's relational garden records in one
+transaction, keeping the database as the single write source.
+
 The request body preserves the existing browser naming convention. A compact
 example is:
 

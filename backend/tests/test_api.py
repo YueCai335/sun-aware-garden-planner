@@ -98,6 +98,26 @@ def test_identical_import_retry_does_not_duplicate_rows(client):
         assert session.scalar(select(func.count()).select_from(Garden)) == 1
 
 
+def test_server_workspace_save_replaces_relational_records(client):
+    payload = workspace_payload()
+    assert client.put("/workspaces/local-workspace-1/import", json=payload).status_code == 201
+    payload["gardens"][0]["name"] = "Updated garden"
+    payload["gardens"][0]["plantings"] = []
+    payload["gardens"][0]["careEvents"] = []
+
+    saved = client.put("/workspaces/local-workspace-1", json=payload)
+
+    assert saved.status_code == 200
+    assert saved.json() == payload
+    assert client.get("/workspaces/local-workspace-1").json() == payload
+
+
+def test_server_workspace_save_requires_an_import(client):
+    response = client.put("/workspaces/local-workspace-1", json=workspace_payload())
+
+    assert response.status_code == 404
+
+
 def test_invalid_import_returns_validation_error_and_persists_nothing(client):
     payload = deepcopy(workspace_payload())
     payload["gardens"][0]["plantings"][0]["growingAreaId"] = "missing-bed"
