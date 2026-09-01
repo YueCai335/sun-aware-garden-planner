@@ -5,6 +5,7 @@ import { FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 import { GardenPlanOverview } from "@/components/GardenPlanOverview";
 import { GrowingAreaLayoutEditor } from "@/components/GrowingAreaLayoutEditor";
 import { SeasonPlanner } from "@/components/SeasonPlanner";
+import { AiGardenNote } from "@/components/AiGardenNote";
 import {
   addDays,
   careTaskStatus,
@@ -38,6 +39,7 @@ import {
 } from "@/lib/gardenWorkspace";
 import {
   importServerWorkspace,
+  type AiCareNoteDraft,
   loadRotationGuidance,
   loadServerWorkspace,
   type RotationGuidance,
@@ -51,7 +53,9 @@ export function GardenWorkspace() {
   const [workspace, setWorkspace] = useState<GardenWorkspace>();
   const [isManagement, setIsManagement] = useState(false);
   const [isCareLog, setIsCareLog] = useState(false);
+  const [careGardenId, setCareGardenId] = useState<string>();
   const [isCareHub, setIsCareHub] = useState(false);
+  const [isAiGardenNote, setIsAiGardenNote] = useState(false);
   const [isSeasonPlanner, setIsSeasonPlanner] = useState(false);
   const [careView, setCareView] = useState<"tasks" | "history">("tasks");
   const [isGardenSetup, setIsGardenSetup] = useState(false);
@@ -160,6 +164,17 @@ export function GardenWorkspace() {
   const garden = workspace?.gardens.find(
     (candidate) => candidate.id === workspace.selectedGardenId,
   );
+  const careGarden = careGardenId === "all-gardens" && workspace
+    ? {
+        id: "all-gardens",
+        name: "All gardens",
+        plan: { widthMeters: 1, depthMeters: 1 },
+        growingAreas: [],
+        plantings: [],
+        careEvents: workspace.careEvents,
+        careTasks: workspace.careTasks,
+      }
+    : garden;
   const editingArea = garden?.growingAreas.find(
     (area) => area.id === editingLayoutId,
   );
@@ -263,6 +278,7 @@ export function GardenWorkspace() {
     setIsManagement(true);
     setIsCareLog(false);
     setIsCareHub(false);
+    setIsAiGardenNote(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setRenameGardenName(nextGarden?.name ?? garden?.name ?? "");
@@ -270,13 +286,15 @@ export function GardenWorkspace() {
   };
 
   const openCareLog = (gardenId = garden?.id) => {
-    if (gardenId)
+    if (gardenId && gardenId !== "all-gardens")
       setWorkspace((current) =>
         current ? { ...current, selectedGardenId: gardenId } : current,
       );
+    setCareGardenId(gardenId);
     setIsManagement(false);
     setIsCareLog(true);
     setIsCareHub(false);
+    setIsAiGardenNote(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setCareView("tasks");
@@ -287,6 +305,7 @@ export function GardenWorkspace() {
     setIsManagement(false);
     setIsCareLog(false);
     setIsCareHub(true);
+    setIsAiGardenNote(false);
     setIsGardenSetup(false);
     setIsSeasonPlanner(false);
     clearTransientState();
@@ -296,8 +315,10 @@ export function GardenWorkspace() {
     setIsManagement(false);
     setIsCareLog(false);
     setIsCareHub(false);
+    setIsAiGardenNote(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
+    setCareGardenId(undefined);
     clearTransientState();
   };
 
@@ -338,6 +359,7 @@ export function GardenWorkspace() {
     setIsGardenSetup(true);
     setIsManagement(false);
     setIsCareLog(false);
+    setIsAiGardenNote(false);
     clearTransientState();
   };
 
@@ -376,7 +398,7 @@ export function GardenWorkspace() {
       return;
     }
 
-    setWorkspace({ version: 8, selectedGardenId: gardens[0].id, gardens });
+    setWorkspace({ ...workspace, selectedGardenId: gardens[0].id, gardens });
     setRenameGardenName(gardens[0].name);
     clearTransientState();
     setMessage(`${garden.name} deleted.`);
@@ -571,8 +593,19 @@ export function GardenWorkspace() {
     setIsManagement(false);
     setIsCareLog(false);
     setIsCareHub(false);
+    setIsAiGardenNote(false);
     setIsGardenSetup(false);
     setIsSeasonPlanner(true);
+    clearTransientState();
+  };
+
+  const openAiGardenNote = () => {
+    setIsManagement(false);
+    setIsCareLog(false);
+    setIsCareHub(false);
+    setIsGardenSetup(false);
+    setIsSeasonPlanner(false);
+    setIsAiGardenNote(true);
     clearTransientState();
   };
 
@@ -686,7 +719,7 @@ export function GardenWorkspace() {
   };
 
   const openAddCare = () => {
-    setCareForm(emptyCareForm());
+    setCareForm(emptyCareForm(careGardenId === "all-gardens" ? "all-gardens" : "garden"));
     setEditingCareEventId(undefined);
     setIsCareFormOpen(true);
   };
@@ -709,10 +742,11 @@ export function GardenWorkspace() {
 
   const saveCare = (formEvent: FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
-    if (!garden) return;
+    if (!workspace || !garden || !careGarden) return;
+    const allGardens = careGarden.id === "all-gardens";
     if (!isCalendarDate(careForm.date))
       return setMessage("Enter a valid care date.");
-    const previous = garden.careEvents.find(
+    const previous = (allGardens ? workspace.careEvents : garden.careEvents).find(
       (event) => event.id === editingCareEventId,
     );
     const area = garden.growingAreas.find(
@@ -752,15 +786,15 @@ export function GardenWorkspace() {
       type: careForm.type,
       date: careForm.date,
       note: careForm.note.trim(),
-      targetScope: careForm.targetScope,
-      ...(careForm.targetScope === "planting-area"
+      targetScope: allGardens ? "all-gardens" : careForm.targetScope,
+      ...(!allGardens && careForm.targetScope === "planting-area"
         ? {
             growingAreaId: careForm.growingAreaId,
             growingAreaName: area?.name ?? previous?.growingAreaName,
             ...(area ? {} : { targetAreaDeleted: true }),
           }
         : {}),
-      ...(careForm.targetScope === "plant-group"
+      ...(!allGardens && careForm.targetScope === "plant-group"
         ? {
             plantingRecordId: careForm.plantingRecordId,
             plantingRecordName:
@@ -779,29 +813,42 @@ export function GardenWorkspace() {
         : {}),
     };
     const action = editingCareEventId ? "updated" : "added";
-    updateGarden((current) => ({
-      ...current,
-      careEvents: editingCareEventId
-        ? current.careEvents.map((item) =>
-            item.id === editingCareEventId ? event : item,
-          )
-        : [...current.careEvents, event],
-    }));
+    setWorkspace((current) => {
+      if (!current) return current;
+      if (allGardens) {
+        return {
+          ...current,
+          careEvents: editingCareEventId
+            ? current.careEvents.map((item) => item.id === editingCareEventId ? event : item)
+            : [...current.careEvents, event],
+        };
+      }
+      return {
+        ...current,
+        gardens: current.gardens.map((candidate) => candidate.id === garden.id ? {
+          ...candidate,
+          careEvents: editingCareEventId
+            ? candidate.careEvents.map((item) => item.id === editingCareEventId ? event : item)
+            : [...candidate.careEvents, event],
+        } : candidate),
+      };
+    });
     setIsCareFormOpen(false);
     setEditingCareEventId(undefined);
     setMessage(`${careForm.type === "watering" ? "Watering" : "Fertilizing"} event ${action}.`);
   };
 
   const removeCare = (event: CareEvent) => {
-    updateGarden((current) => ({
-      ...current,
-      careEvents: current.careEvents.filter((item) => item.id !== event.id),
-    }));
+    setWorkspace((current) => {
+      if (!current) return current;
+      if (careGardenId === "all-gardens") return { ...current, careEvents: current.careEvents.filter((item) => item.id !== event.id) };
+      return { ...current, gardens: current.gardens.map((candidate) => candidate.id === garden?.id ? { ...candidate, careEvents: candidate.careEvents.filter((item) => item.id !== event.id) } : candidate) };
+    });
     setMessage("Care event removed.");
   };
 
   const openAddCareTask = () => {
-    setCareTaskForm(emptyCareTaskForm());
+    setCareTaskForm(emptyCareTaskForm(careGardenId === "all-gardens" ? "all-gardens" : "garden"));
     setEditingCareTaskId(undefined);
     setIsCareTaskFormOpen(true);
   };
@@ -824,10 +871,11 @@ export function GardenWorkspace() {
 
   const saveCareTask = (formEvent: FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
-    if (!garden) return;
+    if (!workspace || !garden || !careGarden) return;
+    const allGardens = careGarden.id === "all-gardens";
     if (!isCalendarDate(careTaskForm.dueDate))
       return setMessage("Enter a valid due date.");
-    const previous = garden.careTasks.find(
+    const previous = (allGardens ? workspace.careTasks : garden.careTasks).find(
       (task) => task.id === editingCareTaskId,
     );
     const area = garden.growingAreas.find(
@@ -864,15 +912,15 @@ export function GardenWorkspace() {
       type: careTaskForm.type,
       dueDate: careTaskForm.dueDate,
       note: careTaskForm.note.trim(),
-      targetScope: careTaskForm.targetScope,
-      ...(careTaskForm.targetScope === "planting-area"
+      targetScope: allGardens ? "all-gardens" : careTaskForm.targetScope,
+      ...(!allGardens && careTaskForm.targetScope === "planting-area"
         ? {
             growingAreaId: careTaskForm.growingAreaId,
             growingAreaName: area?.name ?? previous?.growingAreaName,
             ...(area ? {} : { targetAreaDeleted: true }),
           }
         : {}),
-      ...(careTaskForm.targetScope === "plant-group"
+      ...(!allGardens && careTaskForm.targetScope === "plant-group"
         ? {
             plantingRecordId: careTaskForm.plantingRecordId,
             plantingRecordName: planting
@@ -884,14 +932,26 @@ export function GardenWorkspace() {
       ...(hasRepeatInterval ? { repeatIntervalDays } : {}),
     };
     const action = editingCareTaskId ? "updated" : "added";
-    updateGarden((current) => ({
-      ...current,
-      careTasks: editingCareTaskId
-        ? current.careTasks.map((item) =>
-            item.id === editingCareTaskId ? task : item,
-          )
-        : [...current.careTasks, task],
-    }));
+    setWorkspace((current) => {
+      if (!current) return current;
+      if (allGardens) {
+        return {
+          ...current,
+          careTasks: editingCareTaskId
+            ? current.careTasks.map((item) => item.id === editingCareTaskId ? task : item)
+            : [...current.careTasks, task],
+        };
+      }
+      return {
+        ...current,
+        gardens: current.gardens.map((candidate) => candidate.id === garden.id ? {
+          ...candidate,
+          careTasks: editingCareTaskId
+            ? candidate.careTasks.map((item) => item.id === editingCareTaskId ? task : item)
+            : [...candidate.careTasks, task],
+        } : candidate),
+      };
+    });
     setIsCareTaskFormOpen(false);
     setEditingCareTaskId(undefined);
     setMessage(`${task.type === "watering" ? "Watering" : "Fertilizing"} task ${action}.`);
@@ -904,10 +964,11 @@ export function GardenWorkspace() {
 
   const completeCareTask = (formEvent: FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
-    if (!garden || !completingCareTaskId) return;
+    if (!workspace || !garden || !careGarden || !completingCareTaskId) return;
+    const allGardens = careGarden.id === "all-gardens";
     if (!isCalendarDate(completionDate))
       return setMessage("Enter a valid completion date.");
-    const task = garden.careTasks.find(
+    const task = (allGardens ? workspace.careTasks : garden.careTasks).find(
       (candidate) => candidate.id === completingCareTaskId,
     );
     if (!task) return;
@@ -934,28 +995,69 @@ export function GardenWorkspace() {
           }
         : {}),
     };
-    updateGarden((current) => ({
-      ...current,
-      careEvents: [...current.careEvents, event],
-      careTasks: current.careTasks.flatMap((item) =>
-        item.id !== task.id
-          ? [item]
-          : item.repeatIntervalDays
-            ? [{ ...item, dueDate: addDays(completionDate, item.repeatIntervalDays) }]
-            : [],
-      ),
-    }));
+    setWorkspace((current) => {
+      if (!current) return current;
+      const nextTasks = (items: CareTask[]) => items.flatMap((item) =>
+        item.id !== task.id ? [item] : item.repeatIntervalDays ? [{ ...item, dueDate: addDays(completionDate, item.repeatIntervalDays) }] : [],
+      );
+      if (allGardens) return { ...current, careEvents: [...current.careEvents, { ...event, targetScope: "all-gardens" }], careTasks: nextTasks(current.careTasks) };
+      return { ...current, gardens: current.gardens.map((candidate) => candidate.id === garden.id ? { ...candidate, careEvents: [...candidate.careEvents, event], careTasks: nextTasks(candidate.careTasks) } : candidate) };
+    });
     setCompletingCareTaskId(undefined);
     setCompletionDate("");
     setMessage(`${task.type === "watering" ? "Watering" : "Fertilizing"} task completed.`);
   };
 
   const removeCareTask = (task: CareTask) => {
-    updateGarden((current) => ({
-      ...current,
-      careTasks: current.careTasks.filter((item) => item.id !== task.id),
-    }));
+    setWorkspace((current) => {
+      if (!current) return current;
+      if (careGardenId === "all-gardens") return { ...current, careTasks: current.careTasks.filter((item) => item.id !== task.id) };
+      return { ...current, gardens: current.gardens.map((candidate) => candidate.id === garden?.id ? { ...candidate, careTasks: candidate.careTasks.filter((item) => item.id !== task.id) } : candidate) };
+    });
     setMessage("Care task removed.");
+  };
+
+  const saveAiCareNote = (gardenId: string, draft: AiCareNoteDraft) => {
+    if (!workspace || !draft.type || !draft.date || !isCalendarDate(draft.date)) {
+      setMessage("Choose a care type and valid date before saving.");
+      return;
+    }
+    const targetGarden = workspace.gardens.find((candidate) => candidate.id === gardenId);
+    if (!targetGarden) return;
+    const area = targetGarden.growingAreas.find((candidate) => candidate.id === draft.growingAreaId);
+    const planting = targetGarden.plantings.find((candidate) => candidate.id === draft.plantingRecordId);
+    if (draft.targetScope === "planting-area" && !area) return setMessage("Choose an existing planting area.");
+    if (draft.targetScope === "plant-group" && !planting) return setMessage("Choose an existing plant group.");
+    if (draft.type === "fertilizing" && draft.fertilizerAmount !== null && (!Number.isFinite(draft.fertilizerAmount) || draft.fertilizerAmount <= 0)) {
+      return setMessage("Enter a fertilizer amount greater than zero.");
+    }
+    const event: CareEvent = {
+      id: createId("care"),
+      type: draft.type,
+      date: draft.date,
+      note: draft.note.trim(),
+      targetScope: draft.targetScope,
+      ...(draft.targetScope === "planting-area" ? { growingAreaId: area?.id, growingAreaName: area?.name } : {}),
+      ...(draft.targetScope === "plant-group" ? { plantingRecordId: planting?.id, plantingRecordName: planting ? plantGroupDisplayName(planting, targetGarden) : undefined } : {}),
+      ...(draft.type === "fertilizing"
+        ? {
+            ...(draft.fertilizerProduct?.trim() ? { fertilizerProduct: draft.fertilizerProduct.trim() } : {}),
+            ...(draft.fertilizerAmount !== null ? { fertilizerAmount: draft.fertilizerAmount } : {}),
+            ...(draft.fertilizerUnit?.trim() ? { fertilizerUnit: draft.fertilizerUnit.trim() } : {}),
+          }
+        : {}),
+    };
+    setWorkspace((current) => current ? {
+      ...current,
+      selectedGardenId: gardenId,
+      ...(draft.targetScope === "all-gardens"
+        ? { careEvents: [...current.careEvents, event] }
+        : { gardens: current.gardens.map((candidate) => candidate.id === gardenId ? { ...candidate, careEvents: [...candidate.careEvents, event] } : candidate) }),
+    } : current);
+    setIsAiGardenNote(false);
+    setIsCareLog(true);
+    setCareView("history");
+    setMessage("AI care draft saved to Care History.");
   };
 
   if (!isLoaded)
@@ -985,7 +1087,7 @@ export function GardenWorkspace() {
           <h1>{garden.name}</h1>
         </div>
         <div className="header-actions">
-          {isManagement || isCareLog || isCareHub || isSeasonPlanner ? (
+          {isManagement || isCareLog || isCareHub || isSeasonPlanner || isAiGardenNote ? (
             <button
               className="secondary-button"
               onClick={returnToDashboard}
@@ -1011,23 +1113,32 @@ export function GardenWorkspace() {
           onRecordPlant={recordSeasonPlant}
           workspaceId={serverWorkspaceId}
         />
+      ) : isAiGardenNote ? (
+        <AiGardenNote
+          gardens={workspace.gardens}
+          initialGardenId={garden.id}
+          isServerBacked={storageSource === "server"}
+          onSave={saveAiCareNote}
+          workspaceId={serverWorkspaceId}
+        />
       ) : isCareHub ? (
-        <CareHub gardens={workspace.gardens} onOpenCare={openCareLog} />
+        <CareHub gardens={workspace.gardens} onOpenCare={openCareLog} workspace={workspace} />
       ) : !isManagement && !isCareLog ? (
         <Home
           garden={garden}
           gardens={workspace.gardens}
           onCare={openCareHub}
+          onAiGardenNote={openAiGardenNote}
           onPlanSeason={openSeasonPlanner}
           onAddGarden={openGardenSetup}
           onManage={openManagement}
           onSelectGarden={selectGarden}
           message={message}
         />
-      ) : isCareLog ? (
+      ) : isCareLog && careGarden ? (
         <section className="operations-content">
           <CareWorkspace
-            garden={garden}
+            garden={careGarden}
             view={careView}
             onChangeView={setCareView}
             careTaskForm={careTaskForm}
@@ -1237,6 +1348,7 @@ function Home({
   gardens,
   onAddGarden,
   onCare,
+  onAiGardenNote,
   onPlanSeason,
   onManage,
   onSelectGarden,
@@ -1246,6 +1358,7 @@ function Home({
   gardens: Garden[];
   onAddGarden: () => void;
   onCare: () => void;
+  onAiGardenNote: () => void;
   onPlanSeason: () => void;
   onManage: (gardenId?: string) => void;
   onSelectGarden: (gardenId: string) => void;
@@ -1305,6 +1418,9 @@ function Home({
         <button className="secondary-button" onClick={onCare} type="button">
           Care
         </button>
+        <button className="secondary-button" onClick={onAiGardenNote} type="button">
+          AI garden note
+        </button>
       </section>
       <Status message={message} />
     </section>
@@ -1314,9 +1430,11 @@ function Home({
 function CareHub({
   gardens,
   onOpenCare,
+  workspace,
 }: {
   gardens: Garden[];
   onOpenCare: (gardenId: string) => void;
+  workspace: GardenWorkspace;
 }) {
   return (
     <section className="operations-content season-planner" aria-labelledby="care-hub-heading">
@@ -1324,10 +1442,23 @@ function CareHub({
         <div>
           <p className="section-eyebrow">Garden operations</p>
           <h2 id="care-hub-heading">Care</h2>
-          <p className="section-context">Open a garden to manage its care tasks and completed care history.</p>
+          <p className="section-context">Manage care for all gardens or one location.</p>
         </div>
       </div>
       <div className="season-planner-grid">
+        <article className="season-area-card">
+          <div>
+            <p className="section-eyebrow">All locations</p>
+            <h3>All gardens</h3>
+          </div>
+          <p className="season-history">
+            <strong>{workspace.careTasks.length} open {workspace.careTasks.length === 1 ? "task" : "tasks"}</strong>
+            <span>{workspace.careEvents.length} completed care {workspace.careEvents.length === 1 ? "record" : "records"}</span>
+          </p>
+          <button className="secondary-button" onClick={() => onOpenCare("all-gardens")} type="button">
+            Open care
+          </button>
+        </article>
         {gardens.map((candidate) => {
           const openTasks = candidate.careTasks.length;
           const recentEvents = candidate.careEvents.length;
@@ -1385,7 +1516,7 @@ function CareSummary({ garden }: { garden: Garden }) {
                 {event.type === "watering" ? "Watering" : "Fertilizing"}
               </span>
               <span>{event.date}</span>
-              <span>{careTargetLabel(event)}</span>
+              <span>{careTargetLabel(event, garden.name)}</span>
             </li>
           ))}
         </ul>
@@ -1666,7 +1797,7 @@ function CareTasks({
                     <div>
                       <strong>{task.type === "watering" ? "Watering" : "Fertilizing"}</strong>
                       <p>
-                        Due {task.dueDate} · {careTargetLabel(task)}
+                        Due {task.dueDate} · {careTargetLabel(task, garden.name)}
                         {task.repeatIntervalDays ? ` · Repeats every ${task.repeatIntervalDays} days` : ""}
                         {task.note ? ` · ${task.note}` : ""}
                       </p>
@@ -1714,9 +1845,9 @@ function CareTargetSelect({
             plantingRecordId: targetScope === "plant-group" ? targetId : "",
           });
         }}
-        value={form.targetScope === "garden" ? "garden" : `${form.targetScope}:${form.targetScope === "planting-area" ? form.growingAreaId : form.plantingRecordId}`}
+        value={form.targetScope === "all-gardens" || form.targetScope === "garden" ? form.targetScope : `${form.targetScope}:${form.targetScope === "planting-area" ? form.growingAreaId : form.plantingRecordId}`}
       >
-        <option value="garden">Whole garden</option>
+        <option value={garden.id === "all-gardens" ? "all-gardens" : "garden"}>{garden.name}</option>
         <optgroup label="Planting areas">
           {historicalTarget?.targetScope === "planting-area" &&
           historicalTarget.growingAreaId === form.growingAreaId &&
@@ -1822,12 +1953,12 @@ function CareLog({
                 });
               }}
               value={
-                form.targetScope === "garden"
-                  ? "garden"
+                form.targetScope === "all-gardens" || form.targetScope === "garden"
+                  ? form.targetScope
                   : `${form.targetScope}:${form.targetScope === "planting-area" ? form.growingAreaId : form.plantingRecordId}`
               }
             >
-              <option value="garden">Whole garden</option>
+              <option value={garden.id === "all-gardens" ? "all-gardens" : "garden"}>{garden.name}</option>
               <optgroup label="Planting areas">
                 {historicalTarget?.targetScope === "planting-area" &&
                   historicalTarget.growingAreaId === form.growingAreaId &&
@@ -1919,7 +2050,7 @@ function CareLog({
               <div>
                 <strong>{event.type === "watering" ? "Watering" : "Fertilizing"}</strong>
                 <p>
-                  {event.date} · {careTargetLabel(event)}
+                  {event.date} · {careTargetLabel(event, garden.name)}
                   {event.type === "fertilizing" && careFertilizerDetails(event)
                     ? ` · ${careFertilizerDetails(event)}`
                     : ""}
@@ -2532,12 +2663,12 @@ function emptyPlantingForm(): PlantingForm {
   };
 }
 
-function emptyCareForm(): CareForm {
+function emptyCareForm(targetScope: CareEventTargetScope = "garden"): CareForm {
   return {
     type: "watering",
     date: "",
     note: "",
-    targetScope: "garden",
+    targetScope,
     growingAreaId: "",
     plantingRecordId: "",
     fertilizerProduct: "",
@@ -2546,20 +2677,21 @@ function emptyCareForm(): CareForm {
   };
 }
 
-function emptyCareTaskForm(): CareTaskForm {
+function emptyCareTaskForm(targetScope: CareEventTargetScope = "garden"): CareTaskForm {
   return {
     type: "watering",
     dueDate: "",
     note: "",
-    targetScope: "garden",
+    targetScope,
     growingAreaId: "",
     plantingRecordId: "",
     repeatIntervalDays: "",
   };
 }
 
-function careTargetLabel(event: CareEvent | CareTask) {
-  if (event.targetScope === "garden") return "Whole garden";
+function careTargetLabel(event: CareEvent | CareTask, gardenName?: string) {
+  if (event.targetScope === "all-gardens") return "All gardens";
+  if (event.targetScope === "garden") return gardenName ?? "Garden";
   if (event.targetScope === "plant-group")
     return event.targetPlantingRecordDeleted
       ? `Former plant group: ${event.plantingRecordName}`

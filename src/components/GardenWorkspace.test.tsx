@@ -29,7 +29,9 @@ async function openSelectedGarden() {
 
 async function openCare(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Care" }));
-  await user.click(screen.getByRole("button", { name: "Open care" }));
+  const gardenCard = screen.getByRole("heading", { name: "Demo Garden", level: 3 }).closest("article");
+  if (!gardenCard) throw new Error("Demo Garden care card was not found");
+  await user.click(within(gardenCard).getByRole("button", { name: "Open care" }));
 }
 
 describe("GardenWorkspace", () => {
@@ -108,6 +110,77 @@ describe("GardenWorkspace", () => {
     await screen.findByText("Changes could not be saved to PostgreSQL. Keep this page open and make another change after the API recovers.");
     expect(window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY)).toBe("server-workspace");
     expect(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY)).toBe(JSON.stringify(workspace));
+  });
+
+  it("reviews an AI garden note before saving it to Care History", async () => {
+    const user = userEvent.setup();
+    const workspace = createDemoGardenWorkspace();
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/ai/care-note-draft")) {
+        return {
+          ok: true,
+          json: async () => ({
+            type: "fertilizing",
+            date: "2026-08-31",
+            note: "昨天施了 10 mL 鱼肥。",
+            targetScope: "planting-area",
+            growingAreaId: "demo-raised-bed",
+            growingAreaName: "Sample raised bed",
+            plantingRecordId: null,
+            plantingRecordName: null,
+            fertilizerProduct: "Fish fertilizer",
+            fertilizerAmount: 10,
+            fertilizerUnit: "mL",
+            reviewNotes: [],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => init?.method ? JSON.parse(String(init.body)) : { workspaceId: "server-workspace", ...workspace },
+      };
+    });
+    vi.stubGlobal("fetch", fetch);
+    window.localStorage.setItem(SERVER_WORKSPACE_STORAGE_KEY, "server-workspace");
+
+    render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "AI garden note" }));
+    await user.type(screen.getByLabelText("Care note"), "昨天施了 10 mL 鱼肥。");
+    await user.click(screen.getByRole("button", { name: "Create draft" }));
+    expect(await screen.findByRole("heading", { name: "AI extracted draft" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Fertilizer product (optional)")).toHaveValue("Fish fertilizer");
+    expect(screen.queryByText("AI care draft saved to Care History.")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save to Care History" }));
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
+    expect(screen.getByText(/Fish fertilizer/)).toBeInTheDocument();
+  });
+
+  it("separates all-garden care from care for one named location", async () => {
+    const user = userEvent.setup();
+    await loadDemo(user);
+
+    await user.click(screen.getByRole("button", { name: "Care" }));
+    const allGardensCard = screen.getByRole("heading", { name: "All gardens", level: 3 }).closest("article");
+    const demoGardenCard = screen.getByRole("heading", { name: "Demo Garden", level: 3 }).closest("article");
+    if (!allGardensCard || !demoGardenCard) throw new Error("Care cards were not found");
+
+    await user.click(within(allGardensCard).getByRole("button", { name: "Open care" }));
+    expect(screen.getByText("All gardens")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "History" }));
+    await user.click(screen.getByRole("button", { name: "Add care event" }));
+    expect(screen.getByLabelText("Target")).toHaveValue("all-gardens");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Back to dashboard" }));
+
+    await user.click(screen.getByRole("button", { name: "Care" }));
+    const refreshedDemoGardenCard = screen.getByRole("heading", { name: "Demo Garden", level: 3 }).closest("article");
+    if (!refreshedDemoGardenCard) throw new Error("Demo Garden care card was not found");
+    await user.click(within(refreshedDemoGardenCard).getByRole("button", { name: "Open care" }));
+    await user.click(screen.getByRole("tab", { name: "History" }));
+    await user.click(screen.getByRole("button", { name: "Add care event" }));
+    expect(screen.getByLabelText("Target")).toHaveValue("garden");
+    expect(screen.getByRole("option", { name: "Demo Garden" })).toBeInTheDocument();
   });
 
   it("uses thumbnail selection and direct double-click or keyboard editing", async () => {

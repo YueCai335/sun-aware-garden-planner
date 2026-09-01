@@ -155,7 +155,7 @@ export type PlantingRecord = {
 };
 export const careEventTypes = ["watering", "fertilizing"] as const;
 export type CareEventType = (typeof careEventTypes)[number];
-export type CareEventTargetScope = "garden" | "planting-area" | "plant-group";
+export type CareEventTargetScope = "all-gardens" | "garden" | "planting-area" | "plant-group";
 export type CareEvent = {
   id: string;
   type: CareEventType;
@@ -196,9 +196,15 @@ export type Garden = {
   careTasks: CareTask[];
 };
 export type GardenWorkspace = {
-  version: 8;
+  version: 9;
   selectedGardenId: string;
   gardens: Garden[];
+  careEvents: CareEvent[];
+  careTasks: CareTask[];
+};
+
+type Version8GardenWorkspace = Omit<GardenWorkspace, "version" | "careEvents" | "careTasks"> & {
+  version: 8;
 };
 
 type Version7CareTask = CareTask & { completedDate?: string };
@@ -297,7 +303,7 @@ export function createGarden(name: string): Garden {
 
 export function createGardenWorkspace(name: string): GardenWorkspace {
   const garden = createGarden(name);
-  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 9, selectedGardenId: garden.id, gardens: [garden], careEvents: [], careTasks: [] };
 }
 
 export function createDemoGardenWorkspace(): GardenWorkspace {
@@ -370,7 +376,7 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
     careTasks: [],
   };
 
-  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 9, selectedGardenId: garden.id, gardens: [garden], careEvents: [], careTasks: [] };
 }
 
 export function createRectangularLayout(
@@ -550,6 +556,8 @@ export function readGardenWorkspace(
   try {
     const parsed: unknown = JSON.parse(value);
     if (isGardenWorkspace(parsed)) return parsed;
+    if (isVersion8GardenWorkspace(parsed))
+      return migrateVersion8GardenWorkspace(parsed);
     if (isVersion7GardenWorkspace(parsed))
       return migrateVersion7GardenWorkspace(parsed);
     if (isVersion6GardenWorkspace(parsed))
@@ -593,20 +601,28 @@ function migrateVersion3GardenWorkspace(
     careEvents: [],
     careTasks: [],
   };
-  return { version: 8, selectedGardenId: garden.id, gardens: [garden] };
+  return { version: 9, selectedGardenId: garden.id, gardens: [garden], careEvents: [], careTasks: [] };
+}
+
+function migrateVersion8GardenWorkspace(
+  workspace: Version8GardenWorkspace,
+): GardenWorkspace {
+  return { ...workspace, version: 9, careEvents: [], careTasks: [] };
 }
 
 function migrateVersion4GardenWorkspace(
   workspace: Version4GardenWorkspace,
 ): GardenWorkspace {
   return {
-    version: 8,
+    version: 9,
     selectedGardenId: workspace.selectedGardenId,
     gardens: workspace.gardens.map((garden) => ({
       ...garden,
       careEvents: [],
       careTasks: [],
     })),
+    careEvents: [],
+    careTasks: [],
   };
 }
 
@@ -614,9 +630,11 @@ function migrateVersion5GardenWorkspace(
   workspace: Version5GardenWorkspace,
 ): GardenWorkspace {
   return {
-    version: 8,
+    version: 9,
     selectedGardenId: workspace.selectedGardenId,
     gardens: workspace.gardens.map((garden) => ({ ...garden, careTasks: [] })),
+    careEvents: [],
+    careTasks: [],
   };
 }
 
@@ -624,9 +642,11 @@ function migrateVersion6GardenWorkspace(
   workspace: Version6GardenWorkspace,
 ): GardenWorkspace {
   return {
-    version: 8,
+    version: 9,
     selectedGardenId: workspace.selectedGardenId,
     gardens: workspace.gardens.map((garden) => ({ ...garden, careTasks: [] })),
+    careEvents: [],
+    careTasks: [],
   };
 }
 
@@ -634,7 +654,7 @@ function migrateVersion7GardenWorkspace(
   workspace: Version7GardenWorkspace,
 ): GardenWorkspace {
   return {
-    version: 8,
+    version: 9,
     selectedGardenId: workspace.selectedGardenId,
     gardens: workspace.gardens.map((garden) => ({
       ...garden,
@@ -642,12 +662,30 @@ function migrateVersion7GardenWorkspace(
         completedDate ? [] : [task],
       ),
     })),
+    careEvents: [],
+    careTasks: [],
   };
 }
 
 function isGardenWorkspace(value: unknown): value is GardenWorkspace {
   if (!value || typeof value !== "object") return false;
   const workspace = value as Partial<GardenWorkspace>;
+  return (
+    workspace.version === 9 &&
+    typeof workspace.selectedGardenId === "string" &&
+    Array.isArray(workspace.gardens) &&
+    workspace.gardens.every(isGarden) &&
+    workspace.gardens.some((garden) => garden.id === workspace.selectedGardenId) &&
+    Array.isArray(workspace.careEvents) &&
+    workspace.careEvents.every(isGlobalCareEvent) &&
+    Array.isArray(workspace.careTasks) &&
+    workspace.careTasks.every(isGlobalCareTask)
+  );
+}
+
+function isVersion8GardenWorkspace(value: unknown): value is Version8GardenWorkspace {
+  if (!value || typeof value !== "object") return false;
+  const workspace = value as Partial<Version8GardenWorkspace>;
   return (
     workspace.version === 8 &&
     typeof workspace.selectedGardenId === "string" &&
@@ -1029,6 +1067,20 @@ function isCareEvent(
   );
 }
 
+function isGlobalCareEvent(value: unknown): value is CareEvent {
+  if (!isCareEventBase(value)) return false;
+  const event = value as Partial<CareEvent>;
+  return (
+    event.targetScope === "all-gardens" &&
+    event.growingAreaId === undefined &&
+    event.growingAreaName === undefined &&
+    event.targetAreaDeleted === undefined &&
+    event.plantingRecordId === undefined &&
+    event.plantingRecordName === undefined &&
+    event.targetPlantingRecordDeleted === undefined
+  );
+}
+
 function isVersion5CareEvent(
   value: unknown,
   growingAreas?: GrowingArea[],
@@ -1053,7 +1105,7 @@ function isCareTask(
   growingAreas?: GrowingArea[],
   plantings?: PlantingRecord[],
 ): value is CareTask {
-  if (!value || typeof value !== "object") return false;
+  if (!isCareTaskBase(value)) return false;
   const task = value as Partial<CareTask>;
   const hasNoAreaTarget =
     task.growingAreaId === undefined &&
@@ -1100,6 +1152,37 @@ function isCareTask(
             plantings.some((planting) => planting.id === task.plantingRecordId) ||
             task.targetPlantingRecordDeleted === true) &&
           hasNoAreaTarget)
+  );
+}
+
+function isCareTaskBase(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  const task = value as Partial<CareTask>;
+  return (
+    typeof task.id === "string" &&
+    Boolean(task.id.trim()) &&
+    Boolean(task.type && careEventTypes.includes(task.type)) &&
+    typeof task.dueDate === "string" &&
+    isCalendarDate(task.dueDate) &&
+    typeof task.note === "string" &&
+    (task.repeatIntervalDays === undefined ||
+      (Number.isInteger(task.repeatIntervalDays) && task.repeatIntervalDays > 0)) &&
+    (task.targetAreaDeleted === undefined || typeof task.targetAreaDeleted === "boolean") &&
+    (task.targetPlantingRecordDeleted === undefined || typeof task.targetPlantingRecordDeleted === "boolean")
+  );
+}
+
+function isGlobalCareTask(value: unknown): value is CareTask {
+  if (!isCareTaskBase(value)) return false;
+  const task = value as Partial<CareTask>;
+  return (
+    task.targetScope === "all-gardens" &&
+    task.growingAreaId === undefined &&
+    task.growingAreaName === undefined &&
+    task.targetAreaDeleted === undefined &&
+    task.plantingRecordId === undefined &&
+    task.plantingRecordName === undefined &&
+    task.targetPlantingRecordDeleted === undefined
   );
 }
 

@@ -56,6 +56,14 @@ three preceding calendar years. It returns history, any raised-bed or
 in-ground repeat warning, and family-level rotation candidates. The endpoint
 does not change stored planting records.
 
+`POST /workspaces/{workspaceId}/gardens/{gardenId}/ai/care-note-draft` sends
+one Chinese or English care note to the configured AI provider and returns a
+validated draft for user review. The default provider is local Ollama with
+`qwen3:4b`. Install Ollama on the Mac host, run `ollama pull qwen3:4b`, then
+rebuild the API container. Set `AI_PROVIDER=openai` plus `OPENAI_API_KEY` to
+use OpenAI later. The endpoint returns a draft; the frontend saves a reviewed
+draft with the existing workspace update endpoint.
+
 The request body preserves the existing browser naming convention. A compact
 example is:
 

@@ -1,4 +1,4 @@
-import type { GardenWorkspace, GrowingAreaKind, PlantingCropFamily } from "@/lib/gardenWorkspace";
+import type { CareEventTargetScope, CareEventType, GardenWorkspace, GrowingAreaKind, PlantingCropFamily } from "@/lib/gardenWorkspace";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
@@ -21,6 +21,21 @@ export type RotationGuidance = {
   automatedWarningSupported: boolean;
   hasAutomaticCompatibilityConclusion: boolean;
   rotationFriendlyCropFamilies: PlantingCropFamily[];
+};
+
+export type AiCareNoteDraft = {
+  type: CareEventType | null;
+  date: string | null;
+  note: string;
+  targetScope: CareEventTargetScope;
+  growingAreaId: string | null;
+  growingAreaName: string | null;
+  plantingRecordId: string | null;
+  plantingRecordName: string | null;
+  fertilizerProduct: string | null;
+  fertilizerAmount: number | null;
+  fertilizerUnit: string | null;
+  reviewNotes: string[];
 };
 
 async function request(path: string, options?: RequestInit): Promise<ServerWorkspace> {
@@ -70,4 +85,24 @@ export async function loadRotationGuidance(
   );
   if (!response.ok) throw new Error("The garden server could not check crop rotation.");
   return response.json() as Promise<RotationGuidance>;
+}
+
+export async function createAiCareNoteDraft(
+  workspaceId: string,
+  gardenId: string,
+  note: string,
+): Promise<AiCareNoteDraft> {
+  const response = await fetch(
+    `${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/gardens/${encodeURIComponent(gardenId)}/ai/care-note-draft`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    },
+  );
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.detail ?? "The AI service could not create a care draft.");
+  }
+  return response.json() as Promise<AiCareNoteDraft>;
 }

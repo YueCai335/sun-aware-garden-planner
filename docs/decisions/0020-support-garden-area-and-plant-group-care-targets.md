@@ -1,6 +1,6 @@
 # ADR-0020: Support Garden, Planting-Area, and Plant-Group Care Targets
 
-- Status: Accepted
+- Status: Superseded by [ADR-0034](0034-use-workspace-and-garden-care-targets.md)
 - Date: 2026-08-30
 - Supersedes: [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md)
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) and [ADR-0016](0016-separate-planting-records-from-layout-allocations.md)

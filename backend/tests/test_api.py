@@ -1,16 +1,23 @@
+import json
 from copy import deepcopy
+from datetime import date
 
 from sqlalchemy import func, select
 
 from app import database
+from app.ai import OllamaCareNoteExtractor, complete_known_care_note_fields, configured_care_note_extractor
+from app.main import app, get_care_note_extractor
 from app.models import Garden, Workspace
+from app.schemas import CareNoteExtraction
 
 
 def workspace_payload():
     return {
         "workspaceId": "local-workspace-1",
-        "version": 8,
+        "version": 9,
         "selectedGardenId": "garden-1",
+        "careEvents": [],
+        "careTasks": [],
         "gardens": [
             {
                 "id": "garden-1",
@@ -114,6 +121,46 @@ def test_server_workspace_save_replaces_relational_records(client):
     assert client.get("/workspaces/local-workspace-1").json() == payload
 
 
+def test_workspace_care_records_round_trip_separately_from_one_garden(client):
+    payload = workspace_payload()
+    payload["careEvents"] = [
+        {
+            "id": "global-event-1",
+            "type": "watering",
+            "date": "2026-09-01",
+            "note": "Watered every garden.",
+            "targetScope": "all-gardens",
+        }
+    ]
+    payload["careTasks"] = [
+        {
+            "id": "global-task-1",
+            "type": "fertilizing",
+            "dueDate": "2026-09-07",
+            "note": "Feed every garden.",
+            "targetScope": "all-gardens",
+        }
+    ]
+
+    imported = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert imported.status_code == 201
+    assert imported.json() == payload
+    assert client.get("/workspaces/local-workspace-1").json() == payload
+
+
+def test_garden_care_record_cannot_target_all_gardens(client):
+    payload = workspace_payload()
+    payload["gardens"][0]["careEvents"][0]["targetScope"] = "all-gardens"
+    payload["gardens"][0]["careEvents"][0].pop("plantingRecordId")
+    payload["gardens"][0]["careEvents"][0].pop("plantingRecordName")
+
+    response = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert response.status_code == 422
+    assert "garden care records" in response.text
+
+
 def test_server_workspace_save_requires_an_import(client):
     response = client.put("/workspaces/local-workspace-1", json=workspace_payload())
 
@@ -196,3 +243,176 @@ def test_rotation_guidance_rejects_invalid_persisted_references_and_input(client
     excluded = client.post(path, json={**valid, "excludePlantingId": "missing-planting"})
     assert excluded.status_code == 422
     assert "excludePlantingId" in excluded.text
+
+
+class FakeCareNoteExtractor:
+    def __init__(self, extraction: CareNoteExtraction):
+        self.extraction = extraction
+        self.context: dict[str, object] | None = None
+
+    def extract(self, note: str, garden_context: dict[str, object]) -> CareNoteExtraction:
+        self.context = garden_context
+        return self.extraction
+
+
+def test_ai_care_note_returns_a_reviewable_draft_for_a_chinese_note(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    extractor = FakeCareNoteExtractor(
+        CareNoteExtraction(
+            type="fertilizing",
+            date=date(2026, 8, 31),
+            targetScope="planting-area",
+            targetName="North bed",
+            fertilizerProduct="fish fertilizer",
+            fertilizerAmount=10,
+            fertilizerUnit="mL",
+        )
+    )
+    app.dependency_overrides[get_care_note_extractor] = lambda: extractor
+
+    response = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/ai/care-note-draft",
+        json={"note": "昨天给 North bed 的番茄浇水，还施了 10 mL 鱼肥。"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json() == {
+        "type": "fertilizing",
+        "date": "2026-08-31",
+        "note": "昨天给 North bed 的番茄浇水，还施了 10 mL 鱼肥。",
+        "targetScope": "planting-area",
+        "growingAreaId": "bed-1",
+        "growingAreaName": "North bed",
+        "plantingRecordId": None,
+        "plantingRecordName": None,
+        "fertilizerProduct": "fish fertilizer",
+        "fertilizerAmount": 10,
+        "fertilizerUnit": "mL",
+        "reviewNotes": [],
+    }
+    assert extractor.context == {
+        "name": "Home garden",
+        "plantingAreas": ["North bed"],
+        "plantGroups": ["Tomatoes"],
+    }
+
+
+def test_ai_care_note_falls_back_to_the_garden_when_target_does_not_match(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    app.dependency_overrides[get_care_note_extractor] = lambda: FakeCareNoteExtractor(
+        CareNoteExtraction(type="watering", date=date(2026, 8, 30), targetScope="planting-area", targetName="Patio")
+    )
+
+    response = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/ai/care-note-draft",
+        json={"note": "Watered the patio."},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["targetScope"] == "garden"
+    assert response.json()["reviewNotes"] == ["Choose a target because the note did not match one garden item."]
+
+
+def test_ai_care_note_completes_clear_chinese_watering_details_when_the_model_returns_empty_fields(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    app.dependency_overrides[get_care_note_extractor] = lambda: FakeCareNoteExtractor(CareNoteExtraction())
+
+    response = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/ai/care-note-draft",
+        json={"note": "今天给所有后院菜床浇了水。"},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["type"] == "watering"
+    assert response.json()["date"] == date.today().isoformat()
+    assert response.json()["targetScope"] == "garden"
+    assert response.json()["reviewNotes"] == []
+
+
+def test_ai_care_note_completion_uses_a_known_named_bed_and_leaves_unknown_fields_empty():
+    extraction = complete_known_care_note_fields(
+        CareNoteExtraction(),
+        "Watered North bed today.",
+        {"name": "Home garden", "plantingAreas": ["North bed"], "plantGroups": ["Tomatoes"]},
+        today=date(2026, 9, 1),
+    )
+
+    assert extraction == CareNoteExtraction(
+        type="watering",
+        date=date(2026, 9, 1),
+        targetScope="planting-area",
+        targetName="North bed",
+    )
+
+
+def test_ai_care_note_requires_a_configured_api_key_when_openai_is_selected(client, monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "openai")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    response = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/ai/care-note-draft",
+        json={"note": "Watered tomatoes."},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Set OPENAI_API_KEY before creating an AI garden note."
+
+
+def test_ollama_care_note_extractor_requests_schema_validated_json(monkeypatch):
+    requests: list[dict] = []
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return json.dumps(
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "type": "watering",
+                                "date": "2026-08-30",
+                                "targetScope": "garden",
+                                "targetName": None,
+                                "fertilizerProduct": None,
+                                "fertilizerAmount": None,
+                                "fertilizerUnit": None,
+                            }
+                        )
+                    }
+                }
+            ).encode()
+
+    def fake_urlopen(request, timeout):
+        assert timeout == 90
+        requests.append(json.loads(request.data))
+        return FakeResponse()
+
+    monkeypatch.setattr("app.ai.urlopen", fake_urlopen)
+    extraction = OllamaCareNoteExtractor("http://ollama.local", "qwen3:4b").extract(
+        "Watered the garden yesterday.",
+        {"name": "Home garden", "plantingAreas": [], "plantGroups": []},
+    )
+
+    assert extraction.type == "watering"
+    assert extraction.date == date(2026, 8, 30)
+    assert requests[0]["model"] == "qwen3:4b"
+    assert requests[0]["stream"] is False
+    assert requests[0]["think"] is False
+    assert requests[0]["format"]["type"] == "object"
+
+
+def test_ollama_is_the_default_ai_provider(monkeypatch):
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+
+    extractor = configured_care_note_extractor()
+
+    assert isinstance(extractor, OllamaCareNoteExtractor)
+    assert extractor.model == "qwen3:4b"

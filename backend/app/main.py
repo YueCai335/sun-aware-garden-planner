@@ -4,9 +4,10 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
+from .ai import CareNoteExtractor, CareNoteProviderError, configured_care_note_extractor
 from .database import get_session
-from .schemas import HealthResponse, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
-from .service import import_workspace, load_workspace, rotation_guidance, update_workspace, workspace_response
+from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
+from .service import care_note_draft, import_workspace, load_workspace, rotation_guidance, update_workspace, workspace_response
 
 app = FastAPI(title="Sun-Aware Garden Planner API", version="0.1.0")
 app.add_middleware(
@@ -20,6 +21,13 @@ app.add_middleware(
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 def health() -> HealthResponse:
     return HealthResponse(status="ok")
+
+
+def get_care_note_extractor() -> CareNoteExtractor:
+    try:
+        return configured_care_note_extractor()
+    except CareNoteProviderError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
 
 
 @app.put("/workspaces/{workspace_id}/import", status_code=status.HTTP_201_CREATED, tags=["workspaces"])
@@ -53,6 +61,21 @@ def get_rotation_guidance(
     session: Session = Depends(get_session),
 ):
     return rotation_guidance(session, workspace_id, garden_id, payload)
+
+
+@app.post(
+    "/workspaces/{workspace_id}/gardens/{garden_id}/ai/care-note-draft",
+    response_model=CareNoteDraftResponse,
+    tags=["AI"],
+)
+def create_care_note_draft(
+    workspace_id: str,
+    garden_id: str,
+    payload: CareNoteDraftRequest,
+    session: Session = Depends(get_session),
+    extractor: CareNoteExtractor = Depends(get_care_note_extractor),
+):
+    return care_note_draft(session, workspace_id, garden_id, payload, extractor)
 
 
 @app.put("/workspaces/{workspace_id}", tags=["workspaces"])

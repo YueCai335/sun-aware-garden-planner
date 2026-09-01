@@ -27,6 +27,12 @@ class Workspace(Base):
     gardens: Mapped[list["Garden"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan", order_by="Garden.position"
     )
+    care_events: Mapped[list["WorkspaceCareEvent"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan", order_by="WorkspaceCareEvent.position"
+    )
+    care_tasks: Mapped[list["WorkspaceCareTask"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan", order_by="WorkspaceCareTask.position"
+    )
 
 
 class Garden(Base):
@@ -133,3 +139,35 @@ class CareTask(CareTargetFields, Base):
     note: Mapped[str] = mapped_column(Text)
     repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     garden: Mapped[Garden] = relationship(back_populates="care_tasks")
+
+
+class WorkspaceCareEvent(Base):
+    __tablename__ = "workspace_care_events"
+    __table_args__ = (UniqueConstraint("workspace_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    event_type: Mapped[str] = mapped_column(String(32))
+    occurred_on: Mapped[date] = mapped_column(Date)
+    note: Mapped[str] = mapped_column(Text)
+    fertilizer_product: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    fertilizer_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fertilizer_unit: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    workspace: Mapped[Workspace] = relationship(back_populates="care_events")
+
+
+class WorkspaceCareTask(Base):
+    __tablename__ = "workspace_care_tasks"
+    __table_args__ = (UniqueConstraint("workspace_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    task_type: Mapped[str] = mapped_column(String(32))
+    due_date: Mapped[date] = mapped_column(Date)
+    note: Mapped[str] = mapped_column(Text)
+    repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    workspace: Mapped[Workspace] = relationship(back_populates="care_tasks")

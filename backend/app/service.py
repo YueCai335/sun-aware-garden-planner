@@ -5,9 +5,10 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .models import CareEvent, CareTask, Garden, GrowingArea, Planting, Workspace
+from .ai import CareNoteExtractor, complete_known_care_note_fields
+from .models import CareEvent, CareTask, Garden, GrowingArea, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
 from .rotation import RotationPlanting, SOIL_GROWING_AREA_KINDS, evaluate_rotation
-from .schemas import RotationGuidanceRequest, WorkspaceImport
+from .schemas import CareNoteDraftRequest, RotationGuidanceRequest, WorkspaceImport
 
 
 def import_fingerprint(workspace: WorkspaceImport) -> str:
@@ -24,6 +25,8 @@ def load_workspace(session: Session, workspace_id: str) -> Workspace | None:
             selectinload(Workspace.gardens).selectinload(Garden.plantings),
             selectinload(Workspace.gardens).selectinload(Garden.care_events),
             selectinload(Workspace.gardens).selectinload(Garden.care_tasks),
+            selectinload(Workspace.care_events),
+            selectinload(Workspace.care_tasks),
         )
     )
 
@@ -126,14 +129,125 @@ def rotation_guidance(
     }
 
 
+def care_note_draft(
+    session: Session,
+    workspace_id: str,
+    garden_id: str,
+    payload: CareNoteDraftRequest,
+    extractor: CareNoteExtractor,
+) -> dict:
+    workspace = load_workspace(session, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    garden = next((garden for garden in workspace.gardens if garden.external_id == garden_id), None)
+    if garden is None:
+        raise HTTPException(status_code=404, detail="Garden not found in this workspace")
+
+    garden_context = {
+        "name": garden.name,
+        "plantingAreas": [area.name for area in garden.growing_areas],
+        "plantGroups": [planting.common_name for planting in garden.plantings],
+    }
+    extraction = complete_known_care_note_fields(
+        extractor.extract(payload.note, garden_context),
+        payload.note,
+        garden_context,
+    )
+    target = resolve_care_note_target(garden, extraction.target_scope, extraction.target_name)
+    review_notes: list[str] = []
+    if extraction.type is None:
+        review_notes.append("Choose a care type before saving.")
+    if extraction.date is None:
+        review_notes.append("Choose the care date before saving.")
+    if target is None:
+        target = {"targetScope": "garden"}
+        if extraction.target_name:
+            review_notes.append("Choose a target because the note did not match one garden item.")
+
+    return {
+        "type": extraction.type,
+        "date": extraction.date,
+        "note": payload.note,
+        **target,
+        **(
+            {
+                "fertilizerProduct": extraction.fertilizer_product,
+                "fertilizerAmount": extraction.fertilizer_amount,
+                "fertilizerUnit": extraction.fertilizer_unit,
+            }
+            if extraction.type == "fertilizing"
+            else {}
+        ),
+        "reviewNotes": review_notes,
+    }
+
+
+def resolve_care_note_target(garden: Garden, target_scope: str | None, target_name: str | None) -> dict | None:
+    if target_scope == "all-gardens":
+        return {"targetScope": "all-gardens"}
+    if target_scope in (None, "garden"):
+        return {"targetScope": "garden"}
+    if not target_name:
+        return None
+    normalized_name = target_name.casefold()
+    if target_scope == "planting-area":
+        matches = [area for area in garden.growing_areas if area.name.casefold() == normalized_name]
+        if len(matches) == 1:
+            return {
+                "targetScope": "planting-area",
+                "growingAreaId": matches[0].external_id,
+                "growingAreaName": matches[0].name,
+            }
+    if target_scope == "plant-group":
+        matches = [planting for planting in garden.plantings if planting.common_name.casefold() == normalized_name]
+        if len(matches) == 1:
+            return {
+                "targetScope": "plant-group",
+                "plantingRecordId": matches[0].external_id,
+                "plantingRecordName": planting_target_name(matches[0], garden),
+            }
+    return None
+
+
+def planting_target_name(planting: Planting, garden: Garden) -> str:
+    area = next((area for area in garden.growing_areas if area.id == planting.growing_area_id), None)
+    return f"{planting.common_name} · {area.name if area else 'Planting area'}"
+
+
 def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
     workspace.schema_version = payload.version
     workspace.selected_garden_external_id = payload.selected_garden_id
     workspace.gardens.clear()
+    workspace.care_events.clear()
+    workspace.care_tasks.clear()
     session = Session.object_session(workspace)
     if session is None:
         raise RuntimeError("Workspace must be attached to a session")
     session.flush()
+    for position, event_input in enumerate(payload.care_events):
+        workspace.care_events.append(
+            WorkspaceCareEvent(
+                external_id=event_input.id,
+                position=position,
+                event_type=event_input.type,
+                occurred_on=event_input.date,
+                note=event_input.note,
+                fertilizer_product=event_input.fertilizer_product,
+                fertilizer_amount=event_input.fertilizer_amount,
+                fertilizer_unit=event_input.fertilizer_unit,
+            )
+        )
+    for position, task_input in enumerate(payload.care_tasks):
+        workspace.care_tasks.append(
+            WorkspaceCareTask(
+                external_id=task_input.id,
+                position=position,
+                task_type=task_input.type,
+                due_date=task_input.due_date,
+                note=task_input.note,
+                repeat_interval_days=task_input.repeat_interval_days,
+            )
+        )
     for garden_position, garden_input in enumerate(payload.gardens):
         garden = Garden(
             external_id=garden_input.id,
@@ -215,9 +329,11 @@ def target_fields(record):
 def workspace_response(workspace: Workspace) -> dict:
     return {
         "workspaceId": workspace.id,
-        "version": workspace.schema_version,
+        "version": 9,
         "selectedGardenId": workspace.selected_garden_external_id,
         "gardens": [garden_response(garden) for garden in workspace.gardens],
+        "careEvents": [workspace_care_event_response(event) for event in workspace.care_events],
+        "careTasks": [workspace_care_task_response(task) for task in workspace.care_tasks],
     }
 
 
@@ -296,5 +412,29 @@ def care_task_response(task: CareTask) -> dict:
         "dueDate": task.due_date.isoformat(),
         "note": task.note,
         **target_response(task),
+        **({"repeatIntervalDays": task.repeat_interval_days} if task.repeat_interval_days is not None else {}),
+    }
+
+
+def workspace_care_event_response(event: WorkspaceCareEvent) -> dict:
+    return {
+        "id": event.external_id,
+        "type": event.event_type,
+        "date": event.occurred_on.isoformat(),
+        "note": event.note,
+        "targetScope": "all-gardens",
+        **({"fertilizerProduct": event.fertilizer_product} if event.fertilizer_product is not None else {}),
+        **({"fertilizerAmount": event.fertilizer_amount} if event.fertilizer_amount is not None else {}),
+        **({"fertilizerUnit": event.fertilizer_unit} if event.fertilizer_unit is not None else {}),
+    }
+
+
+def workspace_care_task_response(task: WorkspaceCareTask) -> dict:
+    return {
+        "id": task.external_id,
+        "type": task.task_type,
+        "dueDate": task.due_date.isoformat(),
+        "note": task.note,
+        "targetScope": "all-gardens",
         **({"repeatIntervalDays": task.repeat_interval_days} if task.repeat_interval_days is not None else {}),
     }
