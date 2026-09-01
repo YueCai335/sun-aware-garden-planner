@@ -156,3 +156,8 @@ The FastAPI and PostgreSQL workspace sync starts with an explicit import from
 the browser. Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` when the API runs
 somewhere other than `http://localhost:8000`. Its setup and REST endpoints are
 in [Backend Foundation](backend/README.md).
+
+## Continuous Integration
+
+GitHub Actions validates frontend checks, backend tests, and the Docker Compose
+health endpoint on pull requests and pushes to `main`.
