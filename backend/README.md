@@ -50,6 +50,12 @@ explicit-import boundary before the later server-backed frontend workflow.
 an import. It replaces the workspace's relational garden records in one
 transaction, keeping the database as the single write source.
 
+`POST /workspaces/{workspaceId}/gardens/{gardenId}/rotation-guidance` evaluates
+a planting's crop family and planting date against the same growing area's
+three preceding calendar years. It returns history, any raised-bed or
+in-ground repeat warning, and family-level rotation candidates. The endpoint
+does not change stored planting records.
+
 The request body preserves the existing browser naming convention. A compact
 example is:
 

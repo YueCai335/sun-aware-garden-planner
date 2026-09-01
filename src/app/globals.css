@@ -423,6 +423,92 @@ select {
   gap: 28px;
 }
 
+.season-planner {
+  display: grid;
+  gap: 28px;
+}
+
+.season-label {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.season-filter {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  color: #374034;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.season-filter select {
+  width: 100%;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #1d2920;
+}
+
+.season-planner-empty {
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.season-planner-empty h3,
+.season-area-card h3 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 18px;
+}
+
+.season-planner-empty p,
+.season-history,
+.season-candidates,
+.season-clear {
+  margin: 10px 0 0;
+  color: #657268;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.season-planner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.season-area-card {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.season-history,
+.season-candidates {
+  display: grid;
+  gap: 4px;
+}
+
+.season-history strong,
+.season-candidates strong {
+  color: #374034;
+}
+
+.season-clear {
+  color: #276445;
+  font-weight: 600;
+}
+
 .dashboard-heading,
 .selected-garden-actions {
   display: flex;
@@ -517,6 +603,19 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.dashboard-module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid #cfd7ce;
+  padding-top: 24px;
+}
+
+.dashboard-module-actions .primary-button,
+.dashboard-module-actions .secondary-button {
+  min-width: 180px;
 }
 
 .care-summary {
@@ -708,6 +807,22 @@ select {
   margin: 0;
 }
 
+.data-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  border-top: 1px solid #d7ddd6;
+  padding-top: 20px;
+}
+
+.data-settings p {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+}
+
 .plantings-section {
   margin: 42px 0;
 }
@@ -852,6 +967,25 @@ select {
 
 .planting-form h3 {
   grid-column: 1 / -1;
+}
+
+.rotation-guidance {
+  grid-column: 1 / -1;
+  margin: 0;
+  border-left: 3px solid #6a8b70;
+  padding: 10px 12px;
+  background: #f4f8f1;
+  color: #374034;
+  font-size: 14px;
+}
+
+.rotation-guidance p {
+  margin: 6px 0 0;
+}
+
+.rotation-warning {
+  color: #8a4720;
+  font-weight: 700;
 }
 
 .planting-form .field {
@@ -1162,5 +1296,10 @@ select {
 
   .area-actions {
     gap: 12px;
+  }
+
+  .data-settings {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

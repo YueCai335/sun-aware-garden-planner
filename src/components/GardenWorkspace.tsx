@@ -4,6 +4,7 @@ import { FormEvent, type RefObject, useEffect, useRef, useState } from "react";
 
 import { GardenPlanOverview } from "@/components/GardenPlanOverview";
 import { GrowingAreaLayoutEditor } from "@/components/GrowingAreaLayoutEditor";
+import { SeasonPlanner } from "@/components/SeasonPlanner";
 import {
   addDays,
   careTaskStatus,
@@ -35,7 +36,9 @@ import {
 } from "@/lib/gardenWorkspace";
 import {
   importServerWorkspace,
+  loadRotationGuidance,
   loadServerWorkspace,
+  type RotationGuidance,
   saveServerWorkspace,
 } from "@/lib/gardenWorkspaceApi";
 
@@ -46,6 +49,8 @@ export function GardenWorkspace() {
   const [workspace, setWorkspace] = useState<GardenWorkspace>();
   const [isManagement, setIsManagement] = useState(false);
   const [isCareLog, setIsCareLog] = useState(false);
+  const [isCareHub, setIsCareHub] = useState(false);
+  const [isSeasonPlanner, setIsSeasonPlanner] = useState(false);
   const [careView, setCareView] = useState<"tasks" | "history">("tasks");
   const [isGardenSetup, setIsGardenSetup] = useState(false);
   const [newGardenName, setNewGardenName] = useState("");
@@ -58,6 +63,8 @@ export function GardenWorkspace() {
   const [editingPlantingId, setEditingPlantingId] = useState<string>();
   const [plantingForm, setPlantingForm] =
     useState<PlantingForm>(emptyPlantingForm());
+  const [rotationGuidance, setRotationGuidance] = useState<RotationGuidance>();
+  const [rotationGuidanceState, setRotationGuidanceState] = useState<"idle" | "loading" | "error">("idle");
   const [isCareFormOpen, setIsCareFormOpen] = useState(false);
   const [editingCareEventId, setEditingCareEventId] = useState<string>();
   const [careForm, setCareForm] = useState<CareForm>(emptyCareForm());
@@ -156,6 +163,42 @@ export function GardenWorkspace() {
   );
 
   useEffect(() => {
+    if (
+      !isPlantingFormOpen ||
+      storageSource !== "server" ||
+      !serverWorkspaceId ||
+      !garden ||
+      !plantingForm.cropFamily ||
+      !isCalendarDate(plantingForm.plantingDate)
+    ) {
+      setRotationGuidance(undefined);
+      setRotationGuidanceState("idle");
+      return;
+    }
+    let active = true;
+    setRotationGuidanceState("loading");
+    void loadRotationGuidance(serverWorkspaceId, garden.id, {
+      growingAreaId: plantingForm.growingAreaId,
+      cropFamily: plantingForm.cropFamily,
+      plantingDate: plantingForm.plantingDate,
+      ...(editingPlantingId ? { excludePlantingId: editingPlantingId } : {}),
+    })
+      .then((guidance) => {
+        if (!active) return;
+        setRotationGuidance(guidance);
+        setRotationGuidanceState("idle");
+      })
+      .catch(() => {
+        if (!active) return;
+        setRotationGuidance(undefined);
+        setRotationGuidanceState("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [editingPlantingId, garden, isPlantingFormOpen, plantingForm, serverWorkspaceId, storageSource]);
+
+  useEffect(() => {
     setRenameGardenName(garden?.name ?? "");
   }, [garden?.id]);
 
@@ -217,22 +260,41 @@ export function GardenWorkspace() {
       );
     setIsManagement(true);
     setIsCareLog(false);
+    setIsCareHub(false);
+    setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setRenameGardenName(nextGarden?.name ?? garden?.name ?? "");
     clearTransientState();
   };
 
-  const openCareLog = () => {
+  const openCareLog = (gardenId = garden?.id) => {
+    if (gardenId)
+      setWorkspace((current) =>
+        current ? { ...current, selectedGardenId: gardenId } : current,
+      );
     setIsManagement(false);
     setIsCareLog(true);
+    setIsCareHub(false);
+    setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setCareView("tasks");
+    clearTransientState();
+  };
+
+  const openCareHub = () => {
+    setIsManagement(false);
+    setIsCareLog(false);
+    setIsCareHub(true);
+    setIsGardenSetup(false);
+    setIsSeasonPlanner(false);
     clearTransientState();
   };
 
   const returnToDashboard = () => {
     setIsManagement(false);
     setIsCareLog(false);
+    setIsCareHub(false);
+    setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     clearTransientState();
   };
@@ -487,10 +549,50 @@ export function GardenWorkspace() {
     }));
   };
 
-  const openAddPlanting = (growingAreaId?: string) => {
+  const openAddPlanting = (
+    growingAreaId?: string,
+    cropFamily: PlantingCropFamily | "" = "",
+  ) => {
     if (!garden?.growingAreas.length)
       return setMessage("Add a planting area before recording a planting.");
-    setPlantingForm({ ...emptyPlantingForm(), growingAreaId: growingAreaId ?? "" });
+    setPlantingForm({
+      ...emptyPlantingForm(),
+      cropFamily,
+      growingAreaId: growingAreaId ?? "",
+    });
+    setRotationGuidance(undefined);
+    setEditingPlantingId(undefined);
+    setIsPlantingFormOpen(true);
+  };
+
+  const openSeasonPlanner = () => {
+    setIsManagement(false);
+    setIsCareLog(false);
+    setIsCareHub(false);
+    setIsGardenSetup(false);
+    setIsSeasonPlanner(true);
+    clearTransientState();
+  };
+
+  const recordSeasonPlant = (
+    gardenId: string,
+    growingAreaId: string,
+    cropFamily?: PlantingCropFamily,
+  ) => {
+    const targetGarden = workspace?.gardens.find((candidate) => candidate.id === gardenId);
+    if (!targetGarden) return;
+    setIsSeasonPlanner(false);
+    setIsManagement(true);
+    setWorkspace((current) =>
+      current ? { ...current, selectedGardenId: gardenId } : current,
+    );
+    setEditingLayoutId(growingAreaId);
+    setPlantingForm({
+      ...emptyPlantingForm(),
+      cropFamily: cropFamily ?? "",
+      growingAreaId,
+    });
+    setRotationGuidance(undefined);
     setEditingPlantingId(undefined);
     setIsPlantingFormOpen(true);
   };
@@ -504,6 +606,7 @@ export function GardenWorkspace() {
       growingAreaId: planting.growingAreaId,
       isActive: planting.isActive,
     });
+    setRotationGuidance(undefined);
     setEditingPlantingId(planting.id);
     setIsPlantingFormOpen(true);
   };
@@ -875,7 +978,7 @@ export function GardenWorkspace() {
           <h1>{garden.name}</h1>
         </div>
         <div className="header-actions">
-          {isManagement || isCareLog ? (
+          {isManagement || isCareLog || isCareHub || isSeasonPlanner ? (
             <button
               className="secondary-button"
               onClick={returnToDashboard}
@@ -894,18 +997,25 @@ export function GardenWorkspace() {
           onCreate={addGarden}
           onCancel={returnToDashboard}
         />
+      ) : isSeasonPlanner ? (
+        <SeasonPlanner
+          gardens={workspace.gardens}
+          isServerBacked={storageSource === "server"}
+          onRecordPlant={recordSeasonPlant}
+          workspaceId={serverWorkspaceId}
+        />
+      ) : isCareHub ? (
+        <CareHub gardens={workspace.gardens} onOpenCare={openCareLog} />
       ) : !isManagement && !isCareLog ? (
         <Home
           garden={garden}
           gardens={workspace.gardens}
-          onCareLog={openCareLog}
+          onCare={openCareHub}
+          onPlanSeason={openSeasonPlanner}
           onAddGarden={openGardenSetup}
           onManage={openManagement}
           onSelectGarden={selectGarden}
-          onImport={importBrowserWorkspace}
-          isImporting={isImporting}
           message={message}
-          storageSource={storageSource}
         />
       ) : isCareLog ? (
         <section className="operations-content">
@@ -970,6 +1080,9 @@ export function GardenWorkspace() {
               onSaveAreaDetails={updateAreaDetails}
               onSavePlanting={savePlanting}
               onSetPlantingForm={setPlantingForm}
+              rotationGuidance={rotationGuidance}
+              rotationGuidanceState={rotationGuidanceState}
+              isServerBacked={storageSource === "server"}
               onCancelPlanting={() => {
                 setIsPlantingFormOpen(false);
                 setEditingPlantingId(undefined);
@@ -982,10 +1095,13 @@ export function GardenWorkspace() {
                 onDeleteGarden={deleteGarden}
                 isSetup={isGardenSetup}
                 onFinishSetup={returnToDashboard}
+                isImporting={isImporting}
+                onImport={importBrowserWorkspace}
                 onRenameGarden={renameGarden}
                 onSetRenameGardenName={setRenameGardenName}
                 renameGardenName={renameGardenName}
                 headingRef={gardenManagementHeadingRef}
+                storageSource={storageSource}
               />
               <GardenPlanOverview
                 editable
@@ -1113,24 +1229,20 @@ function Home({
   garden,
   gardens,
   onAddGarden,
-  onCareLog,
-  onImport,
+  onCare,
+  onPlanSeason,
   onManage,
   onSelectGarden,
-  isImporting,
   message,
-  storageSource,
 }: {
   garden: Garden;
   gardens: Garden[];
   onAddGarden: () => void;
-  onCareLog: () => void;
-  onImport: () => void;
+  onCare: () => void;
+  onPlanSeason: () => void;
   onManage: (gardenId?: string) => void;
   onSelectGarden: (gardenId: string) => void;
-  isImporting: boolean;
   message: string;
-  storageSource: "browser" | "server";
 }) {
   return (
     <section className="operations-content garden-dashboard">
@@ -1179,32 +1291,61 @@ function Home({
           <h2 id="selected-garden-heading">{garden.name}</h2>
         </div>
         <div className="dashboard-actions">
-          <button className="primary-button" onClick={onCareLog} type="button">
-            Care
-          </button>
           <button className="secondary-button" onClick={() => onManage()} type="button">
             Edit garden
           </button>
         </div>
       </section>
-      <CareSummary garden={garden} />
-      <section className="care-summary" aria-labelledby="workspace-storage-heading">
-        <div>
-          <p className="section-eyebrow">Workspace storage</p>
-          <h2 id="workspace-storage-heading">{storageSource === "server" ? "PostgreSQL" : "This browser"}</h2>
-        </div>
-        {storageSource === "browser" ? (
-          <>
-            <p className="section-context">Import these gardens when your local API and PostgreSQL service are running.</p>
-            <button className="secondary-button" disabled={isImporting} onClick={onImport} type="button">
-              {isImporting ? "Importing gardens..." : "Import gardens to PostgreSQL"}
-            </button>
-          </>
-        ) : (
-          <p className="section-context">Changes to this workspace save to PostgreSQL.</p>
-        )}
-        <Status message={message} />
+      <section className="dashboard-module-actions" aria-label="Garden tools">
+        <button className="primary-button" onClick={onPlanSeason} type="button">
+          Plan next season
+        </button>
+        <button className="secondary-button" onClick={onCare} type="button">
+          Care
+        </button>
       </section>
+      <Status message={message} />
+    </section>
+  );
+}
+
+function CareHub({
+  gardens,
+  onOpenCare,
+}: {
+  gardens: Garden[];
+  onOpenCare: (gardenId: string) => void;
+}) {
+  return (
+    <section className="operations-content season-planner" aria-labelledby="care-hub-heading">
+      <div className="section-header">
+        <div>
+          <p className="section-eyebrow">Garden operations</p>
+          <h2 id="care-hub-heading">Care</h2>
+          <p className="section-context">Open a garden to manage its care tasks and completed care history.</p>
+        </div>
+      </div>
+      <div className="season-planner-grid">
+        {gardens.map((candidate) => {
+          const openTasks = candidate.careTasks.length;
+          const recentEvents = candidate.careEvents.length;
+          return (
+            <article className="season-area-card" key={candidate.id}>
+              <div>
+                <p className="section-eyebrow">Garden</p>
+                <h3>{candidate.name}</h3>
+              </div>
+              <p className="season-history">
+                <strong>{openTasks} open {openTasks === 1 ? "task" : "tasks"}</strong>
+                <span>{recentEvents} completed care {recentEvents === 1 ? "record" : "records"}</span>
+              </p>
+              <button className="secondary-button" onClick={() => onOpenCare(candidate.id)} type="button">
+                Open care
+              </button>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -1808,18 +1949,24 @@ function GardenManagement({
   onDeleteGarden,
   isSetup,
   onFinishSetup,
+  isImporting,
+  onImport,
   onRenameGarden,
   onSetRenameGardenName,
   renameGardenName,
   headingRef,
+  storageSource,
 }: {
   onDeleteGarden: () => void;
   isSetup: boolean;
   onFinishSetup: () => void;
+  isImporting: boolean;
+  onImport: () => void;
   onRenameGarden: (event: FormEvent<HTMLFormElement>) => void;
   onSetRenameGardenName: (name: string) => void;
   renameGardenName: string;
   headingRef: RefObject<HTMLHeadingElement | null>;
+  storageSource: "browser" | "server";
 }) {
   return (
     <section
@@ -1855,6 +2002,14 @@ function GardenManagement({
           </button>
         </div>
       </form>
+      {storageSource === "browser" ? (
+        <div className="data-settings">
+          <p>Import this workspace when the local API and PostgreSQL service are running.</p>
+          <button className="secondary-button" disabled={isImporting} onClick={onImport} type="button">
+            {isImporting ? "Importing gardens..." : "Import gardens to PostgreSQL"}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -2006,6 +2161,9 @@ function PlantingAreaEditor({
   onSaveAreaDetails,
   onSavePlanting,
   onSetPlantingForm,
+  rotationGuidance,
+  rotationGuidanceState,
+  isServerBacked,
 }: {
   area: GrowingArea;
   garden: Garden;
@@ -2021,6 +2179,9 @@ function PlantingAreaEditor({
   onSaveAreaDetails: (areaId: string, name: string, kind: GrowingAreaKind) => void;
   onSavePlanting: (event: FormEvent<HTMLFormElement>) => void;
   onSetPlantingForm: (form: PlantingForm) => void;
+  rotationGuidance?: RotationGuidance;
+  rotationGuidanceState: "idle" | "loading" | "error";
+  isServerBacked: boolean;
 }) {
   const [name, setName] = useState(area.name);
   const [kind, setKind] = useState<GrowingAreaKind>(area.kind);
@@ -2070,6 +2231,9 @@ function PlantingAreaEditor({
         onSave={onSavePlanting}
         plantingForm={plantingForm}
         setPlantingForm={onSetPlantingForm}
+        rotationGuidance={rotationGuidance}
+        rotationGuidanceState={rotationGuidanceState}
+        isServerBacked={isServerBacked}
       />
     </>
   );
@@ -2086,6 +2250,9 @@ function PlantingManagement({
   onRemove,
   onSave,
   plantingForm,
+  rotationGuidance,
+  rotationGuidanceState,
+  isServerBacked,
   setPlantingForm,
 }: {
   area: GrowingArea;
@@ -2098,6 +2265,9 @@ function PlantingManagement({
   onRemove: (planting: PlantingRecord) => void;
   onSave: (event: FormEvent<HTMLFormElement>) => void;
   plantingForm: PlantingForm;
+  rotationGuidance?: RotationGuidance;
+  rotationGuidanceState: "idle" | "loading" | "error";
+  isServerBacked: boolean;
   setPlantingForm: (form: PlantingForm) => void;
 }) {
   const records = garden.plantings.filter(
@@ -2199,6 +2369,11 @@ function PlantingManagement({
             />{" "}
             Active planting
           </label>
+          <RotationSaveNotice
+            guidance={rotationGuidance}
+            isServerBacked={isServerBacked}
+            state={rotationGuidanceState}
+          />
           <div className="form-actions">
             <button className="primary-button" type="submit">
               {editingPlantingId ? "Save plant" : "Add plant"}
@@ -2255,6 +2430,30 @@ function PlantingManagement({
         </div>
       )}
     </section>
+  );
+}
+
+function RotationSaveNotice({
+  guidance,
+  isServerBacked,
+  state,
+}: {
+  guidance?: RotationGuidance;
+  isServerBacked: boolean;
+  state: "idle" | "loading" | "error";
+}) {
+  if (!isServerBacked || !guidance) {
+    if (state === "loading") return <p className="rotation-guidance">Checking rotation history...</p>;
+    if (state === "error") return <p className="rotation-guidance">Rotation guidance is temporarily unavailable. You can still save this planting.</p>;
+    return null;
+  }
+  if (!guidance.warning) return null;
+  return (
+    <aside className="rotation-guidance" aria-live="polite">
+      <p className="rotation-warning">
+        Rotation warning: {plantingCropFamilyLabels[guidance.warning.cropFamily]} appears in this area&apos;s recent history. You can still save this planting.
+      </p>
+    </aside>
   );
 }
 

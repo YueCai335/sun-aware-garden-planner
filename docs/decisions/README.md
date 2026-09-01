@@ -68,6 +68,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0023](0023-keep-care-history-as-completed-record.md) | Keep care history as the completed-care record | Accepted |
 | [ADR-0024](0024-use-explicit-local-garden-import-for-postgresql.md) | Use an explicit local-garden import for PostgreSQL | Accepted |
 | [ADR-0025](0025-use-three-season-crop-rotation-warnings.md) | Use three-season crop rotation warnings | Accepted |
+| [ADR-0026](0026-use-a-next-season-planning-workspace.md) | Use a next-season planning workspace for crop rotation | Accepted |
 
 ## Interview Use
 

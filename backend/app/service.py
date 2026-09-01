@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from .models import CareEvent, CareTask, Garden, GrowingArea, Planting, Workspace
-from .schemas import WorkspaceImport
+from .rotation import RotationPlanting, SOIL_GROWING_AREA_KINDS, evaluate_rotation
+from .schemas import RotationGuidanceRequest, WorkspaceImport
 
 
 def import_fingerprint(workspace: WorkspaceImport) -> str:
@@ -57,6 +58,72 @@ def update_workspace(session: Session, payload: WorkspaceImport) -> Workspace:
     write_workspace(workspace, payload)
     session.commit()
     return load_workspace(session, payload.workspace_id)  # type: ignore[return-value]
+
+
+def rotation_guidance(
+    session: Session,
+    workspace_id: str,
+    garden_id: str,
+    payload: RotationGuidanceRequest,
+) -> dict:
+    workspace = load_workspace(session, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    garden = next((garden for garden in workspace.gardens if garden.external_id == garden_id), None)
+    if garden is None:
+        raise HTTPException(status_code=404, detail="Garden not found in this workspace")
+    area = next((area for area in garden.growing_areas if area.external_id == payload.growing_area_id), None)
+    if area is None:
+        raise HTTPException(status_code=422, detail="growingAreaId must reference a growing area in this garden")
+    if payload.exclude_planting_id:
+        excluded = next((planting for planting in garden.plantings if planting.external_id == payload.exclude_planting_id), None)
+        if excluded is None or excluded.growing_area_id != area.id:
+            raise HTTPException(status_code=422, detail="excludePlantingId must reference a planting in this growing area")
+    evaluation = evaluate_rotation(
+        growing_area_kind=area.kind,
+        crop_family=payload.crop_family,
+        planting_date=payload.planting_date,
+        plantings=[
+            RotationPlanting(
+                id=planting.external_id,
+                common_name=planting.common_name,
+                crop_family=planting.crop_family,
+                planting_date=planting.planting_date,
+            )
+            for planting in garden.plantings
+            if planting.growing_area_id == area.id and planting.external_id != payload.exclude_planting_id
+        ],
+    )
+    history = [
+        {
+            "plantingId": planting.id,
+            "commonName": planting.common_name,
+            "cropFamily": planting.crop_family,
+            "plantingDate": planting.planting_date,
+            "season": planting.planting_date.year,
+        }
+        for planting in evaluation["history"]
+    ]
+    warning_plantings = [
+        {
+            "plantingId": planting.id,
+            "commonName": planting.common_name,
+            "cropFamily": planting.crop_family,
+            "plantingDate": planting.planting_date,
+            "season": planting.planting_date.year,
+        }
+        for planting in evaluation["warning_plantings"]
+    ]
+    return {
+        "growingAreaId": area.external_id,
+        "growingAreaKind": area.kind,
+        "season": payload.planting_date.year,
+        "history": history,
+        "warning": {"cropFamily": payload.crop_family, "plantings": warning_plantings} if evaluation["warning"] else None,
+        "automatedWarningSupported": area.kind in SOIL_GROWING_AREA_KINDS,
+        "hasAutomaticCompatibilityConclusion": evaluation["has_automatic_compatibility_conclusion"],
+        "rotationFriendlyCropFamilies": evaluation["rotation_friendly_crop_families"],
+    }
 
 
 def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:

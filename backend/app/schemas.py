@@ -159,5 +159,36 @@ class WorkspaceImport(ApiModel):
         return self
 
 
+class RotationGuidanceRequest(ApiModel):
+    growing_area_id: str = Field(min_length=1, max_length=120, serialization_alias="growingAreaId", validation_alias="growingAreaId")
+    crop_family: CropFamily = Field(serialization_alias="cropFamily", validation_alias="cropFamily")
+    planting_date: date = Field(serialization_alias="plantingDate", validation_alias="plantingDate")
+    exclude_planting_id: str | None = Field(default=None, min_length=1, max_length=120, serialization_alias="excludePlantingId", validation_alias="excludePlantingId")
+
+
+class RotationHistoryPlanting(ApiModel):
+    planting_id: str = Field(serialization_alias="plantingId", validation_alias="plantingId")
+    common_name: str = Field(serialization_alias="commonName", validation_alias="commonName")
+    crop_family: CropFamily = Field(serialization_alias="cropFamily", validation_alias="cropFamily")
+    planting_date: date = Field(serialization_alias="plantingDate", validation_alias="plantingDate")
+    season: int
+
+
+class RotationWarning(ApiModel):
+    crop_family: CropFamily = Field(serialization_alias="cropFamily", validation_alias="cropFamily")
+    plantings: list[RotationHistoryPlanting]
+
+
+class RotationGuidanceResponse(ApiModel):
+    growing_area_id: str = Field(serialization_alias="growingAreaId", validation_alias="growingAreaId")
+    growing_area_kind: GardenAreaKind = Field(serialization_alias="growingAreaKind", validation_alias="growingAreaKind")
+    season: int
+    history: list[RotationHistoryPlanting]
+    warning: RotationWarning | None
+    automated_warning_supported: bool = Field(serialization_alias="automatedWarningSupported", validation_alias="automatedWarningSupported")
+    has_automatic_compatibility_conclusion: bool = Field(serialization_alias="hasAutomaticCompatibilityConclusion", validation_alias="hasAutomaticCompatibilityConclusion")
+    rotation_friendly_crop_families: list[CropFamily] = Field(serialization_alias="rotationFriendlyCropFamilies", validation_alias="rotationFriendlyCropFamilies")
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]

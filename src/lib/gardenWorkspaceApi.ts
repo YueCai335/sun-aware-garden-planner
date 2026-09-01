@@ -1,8 +1,27 @@
-import type { GardenWorkspace } from "@/lib/gardenWorkspace";
+import type { GardenWorkspace, GrowingAreaKind, PlantingCropFamily } from "@/lib/gardenWorkspace";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 export type ServerWorkspace = GardenWorkspace & { workspaceId: string };
+
+export type RotationHistoryPlanting = {
+  plantingId: string;
+  commonName: string;
+  cropFamily: PlantingCropFamily;
+  plantingDate: string;
+  season: number;
+};
+
+export type RotationGuidance = {
+  growingAreaId: string;
+  growingAreaKind: GrowingAreaKind;
+  season: number;
+  history: RotationHistoryPlanting[];
+  warning: { cropFamily: PlantingCropFamily; plantings: RotationHistoryPlanting[] } | null;
+  automatedWarningSupported: boolean;
+  hasAutomaticCompatibilityConclusion: boolean;
+  rotationFriendlyCropFamilies: PlantingCropFamily[];
+};
 
 async function request(path: string, options?: RequestInit): Promise<ServerWorkspace> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -29,4 +48,26 @@ export function saveServerWorkspace(workspaceId: string, workspace: GardenWorksp
     method: "PUT",
     body: JSON.stringify({ workspaceId, ...workspace }),
   });
+}
+
+export async function loadRotationGuidance(
+  workspaceId: string,
+  gardenId: string,
+  input: {
+    growingAreaId: string;
+    cropFamily: PlantingCropFamily;
+    plantingDate: string;
+    excludePlantingId?: string;
+  },
+): Promise<RotationGuidance> {
+  const response = await fetch(
+    `${apiBaseUrl}/workspaces/${encodeURIComponent(workspaceId)}/gardens/${encodeURIComponent(gardenId)}/rotation-guidance`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!response.ok) throw new Error("The garden server could not check crop rotation.");
+  return response.json() as Promise<RotationGuidance>;
 }
