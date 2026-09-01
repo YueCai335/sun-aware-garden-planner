@@ -149,3 +149,9 @@ Run the component tests with:
 ```bash
 npm test
 ```
+
+## Local Backend Foundation
+
+The FastAPI and PostgreSQL foundation supports an explicit, one-time import of
+a browser workspace. Its setup, REST endpoints, and local verification steps
+are in [Backend Foundation](backend/README.md).

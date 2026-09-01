@@ -1,0 +1,133 @@
+import uuid
+from datetime import date, datetime
+
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import JSON
+
+from .database import Base
+
+
+JsonValue = JSON().with_variant(JSONB, "postgresql")
+
+
+def new_id() -> str:
+    return str(uuid.uuid4())
+
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    schema_version: Mapped[int] = mapped_column(Integer)
+    selected_garden_external_id: Mapped[str] = mapped_column(String(120))
+    import_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    gardens: Mapped[list["Garden"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan", order_by="Garden.position"
+    )
+
+
+class Garden(Base):
+    __tablename__ = "gardens"
+    __table_args__ = (UniqueConstraint("workspace_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(200))
+    plan_width_meters: Mapped[float] = mapped_column(Float)
+    plan_depth_meters: Mapped[float] = mapped_column(Float)
+    workspace: Mapped[Workspace] = relationship(back_populates="gardens")
+    growing_areas: Mapped[list["GrowingArea"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="GrowingArea.position"
+    )
+    plantings: Mapped[list["Planting"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="Planting.position"
+    )
+    care_events: Mapped[list["CareEvent"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="CareEvent.position"
+    )
+    care_tasks: Mapped[list["CareTask"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="CareTask.position"
+    )
+
+
+class GrowingArea(Base):
+    __tablename__ = "growing_areas"
+    __table_args__ = (UniqueConstraint("garden_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(32))
+    plan_x: Mapped[float] = mapped_column(Float)
+    plan_y: Mapped[float] = mapped_column(Float)
+    plan_rotation_degrees: Mapped[float] = mapped_column(Float)
+    layout: Mapped[dict | None] = mapped_column(JsonValue, nullable=True)
+    garden: Mapped[Garden] = relationship(back_populates="growing_areas")
+    plantings: Mapped[list["Planting"]] = relationship(back_populates="growing_area")
+
+
+class Planting(Base):
+    __tablename__ = "plantings"
+    __table_args__ = (UniqueConstraint("garden_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    growing_area_id: Mapped[str] = mapped_column(ForeignKey("growing_areas.id", ondelete="RESTRICT"))
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    common_name: Mapped[str] = mapped_column(String(200))
+    crop_family: Mapped[str] = mapped_column(String(32))
+    quantity: Mapped[int] = mapped_column(Integer)
+    planting_date: Mapped[date] = mapped_column(Date)
+    is_active: Mapped[bool] = mapped_column(Boolean)
+    garden: Mapped[Garden] = relationship(back_populates="plantings")
+    growing_area: Mapped[GrowingArea] = relationship(back_populates="plantings")
+
+
+class CareTargetFields:
+    target_scope: Mapped[str] = mapped_column(String(32))
+    growing_area_external_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    growing_area_name_snapshot: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    target_area_deleted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    planting_external_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    planting_name_snapshot: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    target_planting_deleted: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+
+class CareEvent(CareTargetFields, Base):
+    __tablename__ = "care_events"
+    __table_args__ = (UniqueConstraint("garden_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    event_type: Mapped[str] = mapped_column(String(32))
+    occurred_on: Mapped[date] = mapped_column(Date)
+    note: Mapped[str] = mapped_column(Text)
+    fertilizer_product: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    fertilizer_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fertilizer_unit: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    garden: Mapped[Garden] = relationship(back_populates="care_events")
+
+
+class CareTask(CareTargetFields, Base):
+    __tablename__ = "care_tasks"
+    __table_args__ = (UniqueConstraint("garden_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    task_type: Mapped[str] = mapped_column(String(32))
+    due_date: Mapped[date] = mapped_column(Date)
+    note: Mapped[str] = mapped_column(Text)
+    repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    garden: Mapped[Garden] = relationship(back_populates="care_tasks")
