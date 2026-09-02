@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 
 import type { Garden, HealthAssessment, HealthRecord, HealthRecordTargetScope, HealthSeverity } from "@/lib/gardenWorkspace";
 import { apiUrl, createPlantHealthAssessment, uploadPlantHealthPhoto } from "@/lib/gardenWorkspaceApi";
+import { PortfolioFeatureLoading, PortfolioFeaturePreview, usePortfolioDemoMode } from "@/components/PortfolioFeaturePreview";
 
 type HealthForm = {
   observedOn: string;
@@ -26,6 +27,7 @@ export function PlantHealth({
   onSave: (gardenId: string, record: HealthRecord) => void;
   workspaceId?: string;
 }) {
+  const isPortfolioDemo = usePortfolioDemoMode();
   const [gardenId, setGardenId] = useState(initialGardenId);
   const [form, setForm] = useState<HealthForm>(emptyHealthForm());
   const [photoPaths, setPhotoPaths] = useState<string[]>([]);
@@ -84,6 +86,9 @@ export function PlantHealth({
     setPhotoPaths([]);
     setAssessment(undefined);
   };
+
+  if (isPortfolioDemo === undefined && (!isServerBacked || !workspaceId)) return <PortfolioFeatureLoading feature="plant-health" />;
+  if (isPortfolioDemo) return <PortfolioFeaturePreview feature="plant-health" />;
 
   if (!isServerBacked || !workspaceId) {
     return (

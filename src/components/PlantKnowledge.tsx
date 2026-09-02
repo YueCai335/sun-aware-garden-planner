@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 
 import type { Garden } from "@/lib/gardenWorkspace";
 import { askPlantKnowledge, type PlantKnowledgeAnswer } from "@/lib/gardenWorkspaceApi";
+import { PortfolioFeatureLoading, PortfolioFeaturePreview, usePortfolioDemoMode } from "@/components/PortfolioFeaturePreview";
 
 export function PlantKnowledge({
   gardens,
@@ -16,6 +17,7 @@ export function PlantKnowledge({
   isServerBacked: boolean;
   workspaceId?: string;
 }) {
+  const isPortfolioDemo = usePortfolioDemoMode();
   const [gardenId, setGardenId] = useState(initialGardenId);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<PlantKnowledgeAnswer>();
@@ -35,6 +37,9 @@ export function PlantKnowledge({
       setIsLoading(false);
     }
   };
+
+  if (isPortfolioDemo === undefined && (!isServerBacked || !workspaceId)) return <PortfolioFeatureLoading feature="plant-knowledge" />;
+  if (isPortfolioDemo) return <PortfolioFeaturePreview feature="plant-knowledge" />;
 
   if (!isServerBacked || !workspaceId) {
     return (

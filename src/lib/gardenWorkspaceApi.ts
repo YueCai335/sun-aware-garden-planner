@@ -8,6 +8,10 @@ export function apiUrl(path: string) {
 
 export type ServerWorkspace = GardenWorkspace & { workspaceId: string };
 
+export type RuntimeConfig = {
+  portfolioDemo: boolean;
+};
+
 export type RotationHistoryPlanting = {
   plantingId: string;
   commonName: string;
@@ -67,6 +71,12 @@ async function request(path: string, options?: RequestInit): Promise<ServerWorks
 
 export function loadServerWorkspace(workspaceId: string) {
   return request(`/workspaces/${encodeURIComponent(workspaceId)}`);
+}
+
+export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
+  const response = await fetch(apiUrl("/runtime-config"));
+  if (!response.ok) throw new Error("The garden server could not load runtime settings.");
+  return response.json() as Promise<RuntimeConfig>;
 }
 
 export function importServerWorkspace(workspaceId: string, workspace: GardenWorkspace) {

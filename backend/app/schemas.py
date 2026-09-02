@@ -333,3 +333,7 @@ class PlantKnowledgeAnswer(PlantKnowledgeDraft):
 
 class HealthResponse(BaseModel):
     status: Literal["ok"]
+
+
+class RuntimeConfigResponse(BaseModel):
+    portfolio_demo: bool = Field(serialization_alias="portfolioDemo")

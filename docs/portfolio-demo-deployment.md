@@ -48,9 +48,9 @@ contains `{ "status": "ok" }`.
 
 1. Open the Vercel URL in a private browser window.
 2. Select **Load demo garden**.
-3. Import the generic garden into PostgreSQL from **Edit garden**.
-4. Add a care event and a next-season plan item.
-5. Refresh the page and confirm the workspace reloads from PostgreSQL.
+3. Add a care event and a next-season plan item.
+4. Refresh the page and confirm the browser keeps the demonstration workspace.
+5. Open the three local AI feature previews and inspect their sample review states.
 
 The first API request after Render idles can take about a minute. Wait for the
 page request to finish, then refresh once when necessary.
@@ -58,7 +58,8 @@ page request to finish, then refresh once when necessary.
 ## Demo Boundaries
 
 - AI Garden Note, Plant Health assessment, Plant Knowledge, and photo uploads
-  display a local-app message in the public demo.
+  show a clear local feature preview in the public demo. The working AI and
+  photo workflows run in the local app.
 - The public demo has no account login. Use generic demonstration data only.
 - Supabase and Render free tiers can pause inactive services. Reopen the
   health URL before sharing the demo link for an interview.

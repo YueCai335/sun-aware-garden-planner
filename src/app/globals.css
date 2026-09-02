@@ -1200,6 +1200,60 @@ select {
   font-size: 14px;
 }
 
+.portfolio-feature-preview {
+  max-width: 780px;
+}
+
+.feature-preview-sample {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.feature-preview-sample h3,
+.feature-preview-sample p {
+  margin: 0;
+}
+
+.feature-preview-sample h3 {
+  color: #183a2a;
+}
+
+.feature-preview-label {
+  color: #657268;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.feature-preview-details {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 0;
+}
+
+.feature-preview-details div {
+  display: grid;
+  gap: 3px;
+}
+
+.feature-preview-details dt {
+  color: #657268;
+  font-size: 13px;
+}
+
+.feature-preview-details dd {
+  margin: 0;
+}
+
+.feature-preview-source {
+  color: #657268;
+  font-size: 14px;
+}
+
 .care-event-list {
   display: grid;
   gap: 10px;

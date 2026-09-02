@@ -14,3 +14,12 @@ def test_portfolio_demo_keeps_ai_and_photo_features_local(client, monkeypatch):
     assert care_note.json()["detail"] == "AI assistance is available in the local app for this portfolio demo."
     assert photo.status_code == 503
     assert photo.json()["detail"] == "Photo upload is available in the local app for this portfolio demo."
+
+
+def test_runtime_config_reports_portfolio_demo_mode(client, monkeypatch):
+    monkeypatch.setenv("PORTFOLIO_DEMO_MODE", "true")
+
+    response = client.get("/runtime-config")
+
+    assert response.status_code == 200
+    assert response.json() == {"portfolioDemo": True}

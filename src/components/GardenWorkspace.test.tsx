@@ -35,6 +35,30 @@ async function openCare(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("GardenWorkspace", () => {
+  it("shows local AI feature previews in the public portfolio demo", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/runtime-config")) {
+        return { ok: true, json: async () => ({ portfolioDemo: true }) };
+      }
+      return { ok: false, json: async () => ({}) };
+    }));
+
+    await loadDemo(user);
+    await user.click(screen.getByRole("button", { name: "AI garden note" }));
+    expect(await screen.findByRole("heading", { name: "AI Garden Note runs in the local app" })).toBeInTheDocument();
+    expect(screen.getByText("Completed care note")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to dashboard" }));
+    await user.click(screen.getByRole("button", { name: "Plant health" }));
+    expect(await screen.findByRole("heading", { name: "Plant Health runs in the local app" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to dashboard" }));
+    await user.click(screen.getByRole("button", { name: "Plant knowledge" }));
+    expect(await screen.findByRole("heading", { name: "Plant Knowledge runs in the local app" })).toBeInTheDocument();
+    expect(screen.queryByText("Import gardens to PostgreSQL first")).not.toBeInTheDocument();
+  });
+
   it("imports browser gardens, reloads from PostgreSQL, and saves a later edit", async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);

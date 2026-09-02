@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 
 import type { CareEventTargetScope, CareEventType, Garden } from "@/lib/gardenWorkspace";
 import { createAiCareNoteDraft, type AiCareNoteDraft } from "@/lib/gardenWorkspaceApi";
+import { PortfolioFeatureLoading, PortfolioFeaturePreview, usePortfolioDemoMode } from "@/components/PortfolioFeaturePreview";
 
 export function AiGardenNote({
   gardens,
@@ -18,6 +19,7 @@ export function AiGardenNote({
   onSave: (gardenId: string, draft: AiCareNoteDraft) => void;
   workspaceId?: string;
 }) {
+  const isPortfolioDemo = usePortfolioDemoMode();
   const [gardenId, setGardenId] = useState(initialGardenId);
   const [note, setNote] = useState("");
   const [draft, setDraft] = useState<AiCareNoteDraft>();
@@ -53,6 +55,9 @@ export function AiGardenNote({
       plantingRecordName: planting ? plantGroupName(planting.commonName, planting.growingAreaId, garden) : null,
     });
   };
+
+  if (isPortfolioDemo === undefined && (!isServerBacked || !workspaceId)) return <PortfolioFeatureLoading feature="care-note" />;
+  if (isPortfolioDemo) return <PortfolioFeaturePreview feature="care-note" />;
 
   if (!isServerBacked || !workspaceId) {
     return (

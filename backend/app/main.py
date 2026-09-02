@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from .ai import CareNoteExtractor, CareNoteProviderError, EmbeddingClient, PlantHealthAssessor, PlantKnowledgeAnswerer, configured_care_note_extractor, configured_embedding_client, configured_plant_health_assessor, configured_plant_knowledge_answerer
 from .database import get_session
-from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, PlantHealthAssessmentRequest, PlantHealthAssessmentResponse, PlantKnowledgeAnswer, PlantKnowledgeQuestion, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
+from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, PlantHealthAssessmentRequest, PlantHealthAssessmentResponse, PlantKnowledgeAnswer, PlantKnowledgeQuestion, RotationGuidanceRequest, RotationGuidanceResponse, RuntimeConfigResponse, WorkspaceImport
 from .service import care_note_draft, import_workspace, load_workspace, plant_health_assessment, plant_knowledge_answer, rotation_guidance, update_workspace, workspace_response
 
 app = FastAPI(title="Sun-Aware Garden Planner API", version="0.1.0")
@@ -29,8 +29,17 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
+@app.get("/runtime-config", response_model=RuntimeConfigResponse, tags=["system"])
+def runtime_config() -> RuntimeConfigResponse:
+    return RuntimeConfigResponse(portfolio_demo=is_portfolio_demo())
+
+
+def is_portfolio_demo() -> bool:
+    return os.getenv("PORTFOLIO_DEMO_MODE", "").lower() in {"1", "true", "yes"}
+
+
 def require_local_feature(feature: str) -> None:
-    if os.getenv("PORTFOLIO_DEMO_MODE", "").lower() in {"1", "true", "yes"}:
+    if is_portfolio_demo():
         raise HTTPException(
             status_code=503,
             detail=f"{feature} is available in the local app for this portfolio demo.",
