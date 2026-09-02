@@ -7,7 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.database import Base
+from app.database import Base, normalize_database_url
 import app.models  # noqa: F401
 
 
@@ -18,7 +18,9 @@ target_metadata = Base.metadata
 
 
 def database_url() -> str:
-    return os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    return normalize_database_url(
+        os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
+    )
 
 
 def run_migrations_offline() -> None:
