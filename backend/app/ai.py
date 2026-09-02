@@ -4,11 +4,21 @@ from datetime import date
 from typing import Protocol
 from urllib.request import Request, urlopen
 
-from .schemas import CareNoteExtraction
+from .schemas import CareNoteExtraction, HealthAssessment, HealthSeverity
 
 
 class CareNoteExtractor(Protocol):
     def extract(self, note: str, garden_context: dict[str, object]) -> CareNoteExtraction: ...
+
+
+class PlantHealthAssessor(Protocol):
+    def assess(
+        self,
+        symptoms: str,
+        severity: HealthSeverity,
+        photo_count: int,
+        garden_context: dict[str, object],
+    ) -> HealthAssessment: ...
 
 
 class CareNoteProviderError(RuntimeError):
@@ -172,3 +182,87 @@ def configured_care_note_extractor() -> CareNoteExtractor:
             raise CareNoteProviderError("Set OPENAI_API_KEY before creating an AI garden note.")
         return OpenAICareNoteExtractor(api_key, os.getenv("OPENAI_MODEL", "gpt-5.6-luna"))
     raise CareNoteProviderError("Set AI_PROVIDER to ollama or openai.")
+
+
+class OpenAIPlantHealthAssessor:
+    def __init__(self, api_key: str, model: str):
+        self.api_key = api_key
+        self.model = model
+
+    def assess(self, symptoms: str, severity: HealthSeverity, photo_count: int, garden_context: dict[str, object]) -> HealthAssessment:
+        try:
+            from openai import OpenAI
+
+            response = OpenAI(api_key=self.api_key).responses.create(
+                model=self.model,
+                store=False,
+                instructions=plant_health_instructions(),
+                input=json.dumps(
+                    {"symptoms": symptoms, "severity": severity, "photoCount": photo_count, "garden": garden_context},
+                    ensure_ascii=False,
+                ),
+                text={"format": {"type": "json_schema", "name": "plant_health_assessment", "strict": True, "schema": HealthAssessment.model_json_schema(by_alias=True)}},
+            )
+            if not response.output_text:
+                raise ValueError("The AI response did not include an assessment.")
+            return HealthAssessment.model_validate_json(response.output_text)
+        except Exception as error:
+            raise CareNoteProviderError("The AI service could not create a plant-health assessment.") from error
+
+
+class OllamaPlantHealthAssessor:
+    def __init__(self, base_url: str, model: str):
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+
+    def assess(self, symptoms: str, severity: HealthSeverity, photo_count: int, garden_context: dict[str, object]) -> HealthAssessment:
+        try:
+            request = Request(
+                f"{self.base_url}/api/chat",
+                data=json.dumps(
+                    {
+                        "model": self.model,
+                        "stream": False,
+                        "think": False,
+                        "format": HealthAssessment.model_json_schema(by_alias=True),
+                        "options": {"temperature": 0},
+                        "messages": [
+                            {"role": "system", "content": plant_health_instructions()},
+                            {"role": "user", "content": json.dumps({"symptoms": symptoms, "severity": severity, "photoCount": photo_count, "garden": garden_context}, ensure_ascii=False)},
+                        ],
+                    },
+                    ensure_ascii=False,
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=90) as response:
+                content = json.loads(response.read())["message"]["content"]
+            return HealthAssessment.model_validate_json(content)
+        except Exception as error:
+            raise CareNoteProviderError("Local Ollama could not create a plant-health assessment. Start Ollama and download the configured model.") from error
+
+
+def configured_plant_health_assessor() -> PlantHealthAssessor:
+    provider = os.getenv("AI_PROVIDER", "ollama").lower()
+    if provider == "ollama":
+        return OllamaPlantHealthAssessor(
+            os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            os.getenv("OLLAMA_MODEL", "qwen3:4b"),
+        )
+    if provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise CareNoteProviderError("Set OPENAI_API_KEY before creating an AI plant-health assessment.")
+        return OpenAIPlantHealthAssessor(api_key, os.getenv("OPENAI_MODEL", "gpt-5.6-luna"))
+    raise CareNoteProviderError("Set AI_PROVIDER to ollama or openai.")
+
+
+def plant_health_instructions() -> str:
+    return (
+        "Create a cautious plant-health observation from a Chinese or English gardener note. "
+        "Return JSON matching the schema. Use possibleIssues for at most three possibilities, not a diagnosis. "
+        "Use low confidence when symptoms are incomplete. Give low-risk observation, hygiene, isolation, or monitoring steps only. "
+        "Do not recommend pesticides, fungicides, brands, doses, or claim certainty. Photos are attached evidence but this text-only model cannot inspect them; "
+        "ask for close-up photos when relevant. Keep each list concise."
+    )

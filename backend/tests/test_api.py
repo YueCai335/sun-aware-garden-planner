@@ -6,15 +6,15 @@ from sqlalchemy import func, select
 
 from app import database
 from app.ai import OllamaCareNoteExtractor, complete_known_care_note_fields, configured_care_note_extractor
-from app.main import app, get_care_note_extractor
+from app.main import app, get_care_note_extractor, get_plant_health_assessor, uploads_dir
 from app.models import Garden, Workspace
-from app.schemas import CareNoteExtraction
+from app.schemas import CareNoteExtraction, HealthAssessment
 
 
 def workspace_payload():
     return {
         "workspaceId": "local-workspace-1",
-        "version": 9,
+        "version": 10,
         "selectedGardenId": "garden-1",
         "careEvents": [],
         "careTasks": [],
@@ -76,6 +76,7 @@ def workspace_payload():
                         "repeatIntervalDays": 3,
                     }
                 ],
+                "healthRecords": [],
             }
         ],
     }
@@ -255,6 +256,21 @@ class FakeCareNoteExtractor:
         return self.extraction
 
 
+class FakePlantHealthAssessor:
+    def __init__(self, assessment: HealthAssessment):
+        self.assessment = assessment
+        self.request: dict[str, object] | None = None
+
+    def assess(self, symptoms: str, severity: str, photo_count: int, garden_context: dict[str, object]) -> HealthAssessment:
+        self.request = {
+            "symptoms": symptoms,
+            "severity": severity,
+            "photoCount": photo_count,
+            "garden": garden_context,
+        }
+        return self.assessment
+
+
 def test_ai_care_note_returns_a_reviewable_draft_for_a_chinese_note(client):
     assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
     extractor = FakeCareNoteExtractor(
@@ -359,6 +375,71 @@ def test_ai_care_note_requires_a_configured_api_key_when_openai_is_selected(clie
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Set OPENAI_API_KEY before creating an AI garden note."
+
+
+def test_plant_health_photo_upload_and_reviewable_assessment(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    uploaded = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/plant-health/photos",
+        files={"photo": ("leaf.png", b"plant-image", "image/png")},
+    )
+    assert uploaded.status_code == 200
+    photo_path = uploaded.json()["path"]
+    assert client.get(photo_path).content == b"plant-image"
+
+    assessor = FakePlantHealthAssessor(
+        HealthAssessment(
+            summary="White coating on lower leaves needs closer observation.",
+            possibleIssues=["Powdery mildew", "Spray residue"],
+            nextSteps=["Check both leaf surfaces tomorrow."],
+            followUpQuestions=["Is the coating easy to wipe away?"],
+            confidence="low",
+        )
+    )
+    app.dependency_overrides[get_plant_health_assessor] = lambda: assessor
+    response = client.post(
+        "/workspaces/local-workspace-1/gardens/garden-1/ai/plant-health-assessment",
+        json={"symptoms": "White coating on lower leaves.", "severity": "medium", "photoCount": 1},
+    )
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["confidence"] == "low"
+    assert assessor.request == {
+        "symptoms": "White coating on lower leaves.",
+        "severity": "medium",
+        "photoCount": 1,
+        "garden": {"name": "Home garden", "plantingAreas": ["North bed"], "plantGroups": ["Tomatoes"]},
+    }
+    (uploads_dir / photo_path.removeprefix("/uploads/")).unlink()
+
+
+def test_plant_health_record_round_trips_with_its_target_and_evidence(client):
+    payload = workspace_payload()
+    payload["gardens"][0]["healthRecords"] = [
+        {
+            "id": "health-1",
+            "observedOn": "2026-09-01",
+            "symptoms": "Lower leaves have white powder.",
+            "severity": "medium",
+            "targetScope": "planting-area",
+            "growingAreaId": "bed-1",
+            "growingAreaName": "North bed",
+            "photoPaths": ["/uploads/leaf.png"],
+            "assessment": {
+                "summary": "Observe the coating over the next day.",
+                "possibleIssues": ["Powdery mildew"],
+                "nextSteps": ["Check nearby leaves."],
+                "followUpQuestions": [],
+                "confidence": "low",
+            },
+        }
+    ]
+
+    response = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert response.status_code == 201
+    assert response.json() == payload
 
 
 def test_ollama_care_note_extractor_requests_schema_validated_json(monkeypatch):

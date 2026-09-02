@@ -5,10 +5,10 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .ai import CareNoteExtractor, complete_known_care_note_fields
-from .models import CareEvent, CareTask, Garden, GrowingArea, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
+from .ai import CareNoteExtractor, PlantHealthAssessor, complete_known_care_note_fields
+from .models import CareEvent, CareTask, Garden, GrowingArea, HealthRecord, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
 from .rotation import RotationPlanting, SOIL_GROWING_AREA_KINDS, evaluate_rotation
-from .schemas import CareNoteDraftRequest, RotationGuidanceRequest, WorkspaceImport
+from .schemas import CareNoteDraftRequest, PlantHealthAssessmentRequest, RotationGuidanceRequest, WorkspaceImport
 
 
 def import_fingerprint(workspace: WorkspaceImport) -> str:
@@ -25,6 +25,7 @@ def load_workspace(session: Session, workspace_id: str) -> Workspace | None:
             selectinload(Workspace.gardens).selectinload(Garden.plantings),
             selectinload(Workspace.gardens).selectinload(Garden.care_events),
             selectinload(Workspace.gardens).selectinload(Garden.care_tasks),
+            selectinload(Workspace.gardens).selectinload(Garden.health_records),
             selectinload(Workspace.care_events),
             selectinload(Workspace.care_tasks),
         )
@@ -182,6 +183,31 @@ def care_note_draft(
     }
 
 
+def plant_health_assessment(
+    session: Session,
+    workspace_id: str,
+    garden_id: str,
+    payload: PlantHealthAssessmentRequest,
+    assessor: PlantHealthAssessor,
+) -> dict:
+    workspace = load_workspace(session, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    garden = next((garden for garden in workspace.gardens if garden.external_id == garden_id), None)
+    if garden is None:
+        raise HTTPException(status_code=404, detail="Garden not found in this workspace")
+    return assessor.assess(
+        payload.symptoms,
+        payload.severity,
+        payload.photo_count,
+        {
+            "name": garden.name,
+            "plantingAreas": [area.name for area in garden.growing_areas],
+            "plantGroups": [planting.common_name for planting in garden.plantings],
+        },
+    ).model_dump(by_alias=True)
+
+
 def resolve_care_note_target(garden: Garden, target_scope: str | None, target_name: str | None) -> dict | None:
     if target_scope == "all-gardens":
         return {"targetScope": "all-gardens"}
@@ -312,6 +338,19 @@ def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
                     **target_fields(task_input),
                 )
             )
+        for position, health_input in enumerate(garden_input.health_records):
+            garden.health_records.append(
+                HealthRecord(
+                    external_id=health_input.id,
+                    position=position,
+                    observed_on=health_input.observed_on,
+                    symptoms=health_input.symptoms,
+                    severity=health_input.severity,
+                    photo_paths=health_input.photo_paths,
+                    assessment=health_input.assessment.model_dump(by_alias=True) if health_input.assessment else None,
+                    **target_fields(health_input),
+                )
+            )
 
 
 def target_fields(record):
@@ -329,7 +368,7 @@ def target_fields(record):
 def workspace_response(workspace: Workspace) -> dict:
     return {
         "workspaceId": workspace.id,
-        "version": 9,
+        "version": 10,
         "selectedGardenId": workspace.selected_garden_external_id,
         "gardens": [garden_response(garden) for garden in workspace.gardens],
         "careEvents": [workspace_care_event_response(event) for event in workspace.care_events],
@@ -368,6 +407,7 @@ def garden_response(garden: Garden) -> dict:
         ],
         "careEvents": [care_event_response(event) for event in garden.care_events],
         "careTasks": [care_task_response(task) for task in garden.care_tasks],
+        "healthRecords": [health_record_response(record) for record in garden.health_records],
     }
 
 
@@ -413,6 +453,18 @@ def care_task_response(task: CareTask) -> dict:
         "note": task.note,
         **target_response(task),
         **({"repeatIntervalDays": task.repeat_interval_days} if task.repeat_interval_days is not None else {}),
+    }
+
+
+def health_record_response(record: HealthRecord) -> dict:
+    return {
+        "id": record.external_id,
+        "observedOn": record.observed_on.isoformat(),
+        "symptoms": record.symptoms,
+        "severity": record.severity,
+        "photoPaths": record.photo_paths,
+        **target_response(record),
+        **({"assessment": record.assessment} if record.assessment is not None else {}),
     }
 
 

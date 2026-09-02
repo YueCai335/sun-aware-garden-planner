@@ -8,6 +8,7 @@ GardenAreaKind = Literal["raised-bed", "in-ground", "container", "greenhouse"]
 CropFamily = Literal["nightshade", "brassica", "cucurbit", "legume", "allium", "root", "leafy", "other"]
 CareType = Literal["watering", "fertilizing"]
 TargetScope = Literal["all-gardens", "garden", "planting-area", "plant-group"]
+HealthSeverity = Literal["low", "medium", "high"]
 
 
 class ApiModel(BaseModel):
@@ -139,6 +140,31 @@ class WorkspaceCareTaskInput(CareTaskInput):
         return self
 
 
+class HealthAssessment(ApiModel):
+    summary: str = Field(min_length=1, max_length=1000)
+    possible_issues: list[str] = Field(max_length=3, serialization_alias="possibleIssues", validation_alias="possibleIssues")
+    next_steps: list[str] = Field(max_length=4, serialization_alias="nextSteps", validation_alias="nextSteps")
+    follow_up_questions: list[str] = Field(max_length=4, serialization_alias="followUpQuestions", validation_alias="followUpQuestions")
+    confidence: HealthSeverity
+
+
+class HealthRecordInput(CareTargetInput):
+    id: str = Field(min_length=1, max_length=120)
+    observed_on: Date = Field(serialization_alias="observedOn", validation_alias="observedOn")
+    symptoms: str = Field(min_length=1, max_length=5000)
+    severity: HealthSeverity
+    photo_paths: list[str] = Field(max_length=3, serialization_alias="photoPaths", validation_alias="photoPaths")
+    assessment: HealthAssessment | None = None
+
+    @model_validator(mode="after")
+    def belongs_to_one_garden(self):
+        if self.target_scope == "all-gardens":
+            raise ValueError("health records must target one garden or one of its contents")
+        if any(not path.startswith("/uploads/") for path in self.photo_paths):
+            raise ValueError("health record photos must use local upload paths")
+        return self
+
+
 class GardenInput(ApiModel):
     id: str = Field(min_length=1, max_length=120)
     name: str = Field(min_length=1, max_length=200)
@@ -147,6 +173,7 @@ class GardenInput(ApiModel):
     plantings: list[PlantingInput]
     care_events: list[CareEventInput] = Field(serialization_alias="careEvents", validation_alias="careEvents")
     care_tasks: list[CareTaskInput] = Field(serialization_alias="careTasks", validation_alias="careTasks")
+    health_records: list[HealthRecordInput] = Field(serialization_alias="healthRecords", validation_alias="healthRecords")
 
     @model_validator(mode="after")
     def references_stay_in_the_garden(self):
@@ -156,7 +183,7 @@ class GardenInput(ApiModel):
             raise ValueError("growing area and planting ids must be unique within a garden")
         if any(planting.growing_area_id not in area_ids for planting in self.plantings):
             raise ValueError("each planting must reference a growing area in the same garden")
-        for record in [*self.care_events, *self.care_tasks]:
+        for record in [*self.care_events, *self.care_tasks, *self.health_records]:
             if record.target_scope == "all-gardens":
                 raise ValueError("garden care records must target this garden or one of its contents")
             if record.growing_area_id and record.growing_area_id not in area_ids and not record.target_area_deleted:
@@ -168,7 +195,7 @@ class GardenInput(ApiModel):
 
 class WorkspaceImport(ApiModel):
     workspace_id: str = Field(min_length=1, max_length=120, serialization_alias="workspaceId", validation_alias="workspaceId")
-    version: Literal[9]
+    version: Literal[10]
     selected_garden_id: str = Field(min_length=1, max_length=120, serialization_alias="selectedGardenId", validation_alias="selectedGardenId")
     gardens: list[GardenInput] = Field(min_length=1)
     care_events: list[WorkspaceCareEventInput] = Field(serialization_alias="careEvents", validation_alias="careEvents")
@@ -242,6 +269,16 @@ class CareNoteDraftResponse(ApiModel):
     fertilizer_amount: float | None = Field(default=None, serialization_alias="fertilizerAmount", validation_alias="fertilizerAmount")
     fertilizer_unit: str | None = Field(default=None, serialization_alias="fertilizerUnit", validation_alias="fertilizerUnit")
     review_notes: list[str] = Field(default_factory=list, serialization_alias="reviewNotes", validation_alias="reviewNotes")
+
+
+class PlantHealthAssessmentRequest(ApiModel):
+    symptoms: str = Field(min_length=1, max_length=5000)
+    severity: HealthSeverity
+    photo_count: int = Field(ge=0, le=3, serialization_alias="photoCount", validation_alias="photoCount")
+
+
+class PlantHealthAssessmentResponse(HealthAssessment):
+    pass
 
 
 class HealthResponse(BaseModel):

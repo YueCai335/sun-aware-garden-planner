@@ -951,6 +951,58 @@ select {
   color: #1d2920;
 }
 
+.health-photo-strip {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 12px;
+  margin: 0;
+}
+
+.health-photo-strip figure {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.health-photo-strip img {
+  width: 132px;
+  height: 96px;
+  border: 1px solid #cfd7ce;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.health-history {
+  margin-top: 28px;
+}
+
+.health-history h3 {
+  margin: 0;
+  color: #183a2a;
+}
+
+.health-history ul {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-history li {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #ffffff;
+}
+
+.health-history li > span {
+  color: #657268;
+}
+
 .care-event-list {
   display: grid;
   gap: 10px;

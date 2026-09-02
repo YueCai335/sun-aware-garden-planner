@@ -35,7 +35,7 @@ pytest
 
 ## REST Contract
 
-`PUT /workspaces/{workspaceId}/import` accepts a complete version-8 browser
+`PUT /workspaces/{workspaceId}/import` accepts a complete version-10 browser
 workspace plus the stable `workspaceId` field. The path value and field must
 match. The request persists gardens, growing areas, layouts, plantings, care
 history, and open care tasks in one transaction.
@@ -64,13 +64,24 @@ rebuild the API container. Set `AI_PROVIDER=openai` plus `OPENAI_API_KEY` to
 use OpenAI later. The endpoint returns a draft; the frontend saves a reviewed
 draft with the existing workspace update endpoint.
 
+`POST /workspaces/{workspaceId}/gardens/{gardenId}/plant-health/photos`
+stores one JPEG, PNG, or WebP photo in the local Docker photo volume and
+returns its upload path. The request accepts files up to 10 MB.
+
+`POST /workspaces/{workspaceId}/gardens/{gardenId}/ai/plant-health-assessment`
+uses the configured provider to create a cautious structured assessment from
+the written symptoms, concern level, photo count, and garden context. The
+local `qwen3:4b` model currently uses the written observation only. The
+frontend presents the assessment for editing before it is saved in the
+garden's health history.
+
 The request body preserves the existing browser naming convention. A compact
 example is:
 
 ```json
 {
   "workspaceId": "local-workspace-1",
-  "version": 8,
+  "version": 10,
   "selectedGardenId": "garden-1",
   "gardens": [
     {
@@ -80,7 +91,8 @@ example is:
       "growingAreas": [],
       "plantings": [],
       "careEvents": [],
-      "careTasks": []
+      "careTasks": [],
+      "healthRecords": []
     }
   ]
 }

@@ -1,15 +1,21 @@
 import os
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from .ai import CareNoteExtractor, CareNoteProviderError, configured_care_note_extractor
+from .ai import CareNoteExtractor, CareNoteProviderError, PlantHealthAssessor, configured_care_note_extractor, configured_plant_health_assessor
 from .database import get_session
-from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
-from .service import care_note_draft, import_workspace, load_workspace, rotation_guidance, update_workspace, workspace_response
+from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, PlantHealthAssessmentRequest, PlantHealthAssessmentResponse, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
+from .service import care_note_draft, import_workspace, load_workspace, plant_health_assessment, rotation_guidance, update_workspace, workspace_response
 
 app = FastAPI(title="Sun-Aware Garden Planner API", version="0.1.0")
+uploads_dir = Path(os.getenv("UPLOADS_DIR", "/tmp/sun-aware-garden-planner-uploads"))
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(","),
@@ -26,6 +32,13 @@ def health() -> HealthResponse:
 def get_care_note_extractor() -> CareNoteExtractor:
     try:
         return configured_care_note_extractor()
+    except CareNoteProviderError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+def get_plant_health_assessor() -> PlantHealthAssessor:
+    try:
+        return configured_plant_health_assessor()
     except CareNoteProviderError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -76,6 +89,48 @@ def create_care_note_draft(
     extractor: CareNoteExtractor = Depends(get_care_note_extractor),
 ):
     return care_note_draft(session, workspace_id, garden_id, payload, extractor)
+
+
+@app.post(
+    "/workspaces/{workspace_id}/gardens/{garden_id}/plant-health/photos",
+    tags=["plant health"],
+)
+async def upload_plant_health_photo(
+    workspace_id: str,
+    garden_id: str,
+    photo: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    workspace = load_workspace(session, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    if not any(garden.external_id == garden_id for garden in workspace.gardens):
+        raise HTTPException(status_code=404, detail="Garden not found in this workspace")
+    suffixes = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    suffix = suffixes.get(photo.content_type or "")
+    if suffix is None:
+        raise HTTPException(status_code=415, detail="Upload a JPEG, PNG, or WebP photo.")
+    content = await photo.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Each photo must be 10 MB or smaller.")
+    filename = f"{uuid4().hex}{suffix}"
+    (uploads_dir / filename).write_bytes(content)
+    return {"path": f"/uploads/{filename}"}
+
+
+@app.post(
+    "/workspaces/{workspace_id}/gardens/{garden_id}/ai/plant-health-assessment",
+    response_model=PlantHealthAssessmentResponse,
+    tags=["AI"],
+)
+def create_plant_health_assessment(
+    workspace_id: str,
+    garden_id: str,
+    payload: PlantHealthAssessmentRequest,
+    session: Session = Depends(get_session),
+    assessor: PlantHealthAssessor = Depends(get_plant_health_assessor),
+):
+    return plant_health_assessment(session, workspace_id, garden_id, payload, assessor)
 
 
 @app.put("/workspaces/{workspace_id}", tags=["workspaces"])

@@ -77,6 +77,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0032](0032-use-local-first-ai-providers-for-care-notes.md) | Use local-first AI providers for care notes | Accepted |
 | [ADR-0033](0033-use-deterministic-fallbacks-for-clear-ai-care-notes.md) | Use deterministic fallbacks for clear AI care notes | Accepted |
 | [ADR-0034](0034-use-workspace-and-garden-care-targets.md) | Use workspace and garden care targets | Accepted |
+| [ADR-0035](0035-use-reviewable-plant-health-records.md) | Use reviewable plant health records | Accepted |
 
 ## Interview Use
 

@@ -1,6 +1,10 @@
-import type { CareEventTargetScope, CareEventType, GardenWorkspace, GrowingAreaKind, PlantingCropFamily } from "@/lib/gardenWorkspace";
+import type { CareEventTargetScope, CareEventType, GardenWorkspace, GrowingAreaKind, HealthAssessment, HealthSeverity, PlantingCropFamily } from "@/lib/gardenWorkspace";
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
+
+export function apiUrl(path: string) {
+  return `${apiBaseUrl}${path}`;
+}
 
 export type ServerWorkspace = GardenWorkspace & { workspaceId: string };
 
@@ -105,4 +109,38 @@ export async function createAiCareNoteDraft(
     throw new Error(detail.detail ?? "The AI service could not create a care draft.");
   }
   return response.json() as Promise<AiCareNoteDraft>;
+}
+
+export async function uploadPlantHealthPhoto(
+  workspaceId: string,
+  gardenId: string,
+  photo: File,
+) {
+  const formData = new FormData();
+  formData.append("photo", photo);
+  const response = await fetch(
+    apiUrl(`/workspaces/${encodeURIComponent(workspaceId)}/gardens/${encodeURIComponent(gardenId)}/plant-health/photos`),
+    { method: "POST", body: formData },
+  );
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.detail ?? "The garden server could not upload this photo.");
+  }
+  return (await response.json() as { path: string }).path;
+}
+
+export async function createPlantHealthAssessment(
+  workspaceId: string,
+  gardenId: string,
+  input: { symptoms: string; severity: HealthSeverity; photoCount: number },
+): Promise<HealthAssessment> {
+  const response = await fetch(
+    apiUrl(`/workspaces/${encodeURIComponent(workspaceId)}/gardens/${encodeURIComponent(gardenId)}/ai/plant-health-assessment`),
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
+  );
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.detail ?? "The AI service could not create a plant-health assessment.");
+  }
+  return response.json() as Promise<HealthAssessment>;
 }

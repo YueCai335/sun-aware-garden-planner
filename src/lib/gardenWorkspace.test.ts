@@ -68,7 +68,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v3))).toEqual({
-      version: 9,
+      version: 10,
       selectedGardenId: "garden-1",
       careEvents: [],
       careTasks: [],
@@ -81,6 +81,7 @@ describe("readGardenWorkspace", () => {
           plantings: v3.plantings,
           careEvents: [],
           careTasks: [],
+          healthRecords: [],
         },
       ],
     });
@@ -195,9 +196,9 @@ describe("readGardenWorkspace", () => {
     };
 
     expect(readGardenWorkspace(JSON.stringify(v4))).toEqual({
-      version: 9,
+      version: 10,
       selectedGardenId: "garden-1",
-      gardens: [{ ...v4.gardens[0], careEvents: [], careTasks: [] }],
+      gardens: [{ ...v4.gardens[0], careEvents: [], careTasks: [], healthRecords: [] }],
       careEvents: [],
       careTasks: [],
     });
@@ -251,7 +252,7 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v1))).toMatchObject({
-      version: 9,
+      version: 10,
       gardens: [
         {
           plan: { widthMeters: 10, depthMeters: 6 },
@@ -265,7 +266,7 @@ describe("readGardenWorkspace", () => {
       ],
     });
     expect(readGardenWorkspace(JSON.stringify(v2))).toMatchObject({
-      version: 9,
+      version: 10,
       selectedGardenId: "garden-2",
       gardens: [
         {
@@ -334,19 +335,20 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v5))).toMatchObject({
-      version: 9,
-      gardens: [{ careEvents: [{ targetScope: "planting-area" }] }],
+      version: 10,
+      gardens: [{ careEvents: [{ targetScope: "planting-area" }], healthRecords: [] }],
     });
 
     const plantGroupWorkspace = {
       ...v5,
-      version: 9,
+      version: 10,
       careEvents: [],
       careTasks: [],
       gardens: [
         {
           ...v5.gardens[0],
           careTasks: [],
+          healthRecords: [],
           careEvents: [
             {
               id: "care-2",
@@ -423,9 +425,9 @@ describe("readGardenWorkspace", () => {
       ],
     };
     expect(readGardenWorkspace(JSON.stringify(v6))).toEqual({
-      version: 9,
+      version: 10,
       selectedGardenId: "garden-1",
-      gardens: [{ ...v6.gardens[0], careTasks: [] }],
+      gardens: [{ ...v6.gardens[0], careTasks: [], healthRecords: [] }],
       careEvents: [],
       careTasks: [],
     });
@@ -473,7 +475,7 @@ describe("readGardenWorkspace", () => {
     };
 
     expect(readGardenWorkspace(JSON.stringify(v7))).toMatchObject({
-      version: 9,
+      version: 10,
       gardens: [
         {
           careEvents: [{ id: "care-1" }],

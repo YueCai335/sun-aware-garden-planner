@@ -59,6 +59,9 @@ class Garden(Base):
     care_tasks: Mapped[list["CareTask"]] = relationship(
         back_populates="garden", cascade="all, delete-orphan", order_by="CareTask.position"
     )
+    health_records: Mapped[list["HealthRecord"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="HealthRecord.position"
+    )
 
 
 class GrowingArea(Base):
@@ -139,6 +142,22 @@ class CareTask(CareTargetFields, Base):
     note: Mapped[str] = mapped_column(Text)
     repeat_interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     garden: Mapped[Garden] = relationship(back_populates="care_tasks")
+
+
+class HealthRecord(CareTargetFields, Base):
+    __tablename__ = "health_records"
+    __table_args__ = (UniqueConstraint("garden_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    observed_on: Mapped[date] = mapped_column(Date)
+    symptoms: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(16))
+    photo_paths: Mapped[list[str]] = mapped_column(JsonValue)
+    assessment: Mapped[dict | None] = mapped_column(JsonValue, nullable=True)
+    garden: Mapped[Garden] = relationship(back_populates="health_records")
 
 
 class WorkspaceCareEvent(Base):

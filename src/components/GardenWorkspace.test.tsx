@@ -156,6 +156,47 @@ describe("GardenWorkspace", () => {
     expect(screen.getByText(/Fish fertilizer/)).toBeInTheDocument();
   });
 
+  it("reviews an AI plant-health assessment before saving it to health history", async () => {
+    const user = userEvent.setup();
+    const workspace = createDemoGardenWorkspace();
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/ai/plant-health-assessment")) {
+        return {
+          ok: true,
+          json: async () => ({
+            summary: "White coating needs a closer look.",
+            possibleIssues: ["Powdery mildew"],
+            nextSteps: ["Check nearby leaves tomorrow."],
+            followUpQuestions: ["Does it wipe away?"],
+            confidence: "low",
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => init?.method ? JSON.parse(String(init.body)) : { workspaceId: "server-workspace", ...workspace },
+      };
+    });
+    vi.stubGlobal("fetch", fetch);
+    window.localStorage.setItem(SERVER_WORKSPACE_STORAGE_KEY, "server-workspace");
+
+    render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Plant health" }));
+    await user.type(screen.getByLabelText("What do you observe?"), "White coating on the lower leaves.");
+    await user.click(screen.getByRole("button", { name: "Create AI assessment" }));
+    expect(await screen.findByRole("heading", { name: "Review assessment" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Summary")).toHaveValue("White coating needs a closer look.");
+
+    await user.click(screen.getByRole("button", { name: "Save health record" }));
+    const history = screen.getByRole("heading", { name: "Health history" }).closest("section");
+    if (!history) throw new Error("Plant health history was not found");
+    expect(within(history).getByText("White coating on the lower leaves.")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/workspaces\/server-workspace$/),
+      expect.objectContaining({ method: "PUT" }),
+    );
+  });
+
   it("separates all-garden care from care for one named location", async () => {
     const user = userEvent.setup();
     await loadDemo(user);
