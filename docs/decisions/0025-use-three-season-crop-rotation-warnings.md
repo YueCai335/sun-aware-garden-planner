@@ -1,6 +1,6 @@
 # ADR-0025: Use Three-Season Crop Rotation Warnings
 
-- Status: Accepted
+- Status: Superseded by [ADR-0037](0037-use-area-summary-and-pairing-notes-for-season-planning.md)
 - Date: 2026-09-01
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md),
   [ADR-0016](0016-separate-planting-records-from-layout-allocations.md), and

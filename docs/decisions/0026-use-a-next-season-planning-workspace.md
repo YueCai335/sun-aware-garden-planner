@@ -1,6 +1,6 @@
 # ADR-0026: Use a Next-Season Planning Workspace for Crop Rotation
 
-- Status: Accepted
+- Status: Superseded by ADR-0039
 - Date: 2026-09-01
 - Related: [ADR-0025](0025-use-three-season-crop-rotation-warnings.md)
 

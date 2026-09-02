@@ -48,7 +48,8 @@ Core capabilities:
 - Record seed starting, planting, transplanting, watering, fertilizing,
   pruning, harvests, pests, and diseases.
 - Store fertilizer type, amount, application area, and photos where useful.
-- Track current plants and year-by-year crop history by growing area.
+- Track current plants and year-by-year crop history by growing area, with
+  separate next-season plans for upcoming choices.
 - Maintain planned care tasks and completed care history.
 - Show an at-a-glance garden plan with growing areas arranged at relative
   metric scale.
@@ -310,20 +311,19 @@ Until then, resume bullets should describe only completed functionality.
 
 ## Current Priority
 
-Build the Garden Operations MVP in focused slices:
+Complete the first end-to-end next-season planning workflow, then prepare a
+portfolio-ready release:
 
-1. Deliver planting records with crop family, quantity, planting date, and a
-   growing-area link.
-2. Deliver the garden dashboard and journal workflow.
-3. Add task completion and date-based views.
-4. Introduce FastAPI and PostgreSQL only after the browser workflow provides a
-   stable product model.
-5. Add crop rotation and the AI assistant after persisted operations data is
-   available.
+1. Show planting-area rotation summaries and support adopted next-season plant
+   records with evidence-labeled pairing notes.
+2. Expand Plant Knowledge only through reviewed source cards and evaluation
+   cases.
+3. Add a focused end-to-end test for the core planning workflow.
+4. Prepare a demo dataset, architecture explanation, screenshots, and a
+   deployment decision for job applications.
 
 The current priority is recorded in
 [ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md),
-[ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md),
-[ADR-0016](decisions/0016-separate-planting-records-from-layout-allocations.md),
-[ADR-0020](decisions/0020-support-garden-area-and-plant-group-care-targets.md),
-and [ADR-0021](decisions/0021-use-dashboard-garden-setup-and-direct-editing.md).
+[ADR-0025](decisions/0025-use-three-season-crop-rotation-warnings.md),
+[ADR-0026](decisions/0026-use-a-next-season-planning-workspace.md), and
+[ADR-0037](decisions/0037-use-area-summary-and-pairing-notes-for-season-planning.md).

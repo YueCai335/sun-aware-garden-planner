@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from .ai import CareNoteExtractor, EmbeddingClient, PlantHealthAssessor, PlantKnowledgeAnswerer, complete_known_care_note_fields
 from .knowledge import SEED_KNOWLEDGE_CARDS
-from .models import CareEvent, CareTask, Garden, GrowingArea, HealthRecord, KnowledgeChunk, KnowledgeSource, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
-from .rotation import RotationPlanting, SOIL_GROWING_AREA_KINDS, evaluate_rotation
+from .models import CareEvent, CareTask, Garden, GrowingArea, HealthRecord, KnowledgeChunk, KnowledgeSource, PlannedPlanting, Planting, SeasonPlan, Workspace, WorkspaceCareEvent, WorkspaceCareTask
+from .rotation import ROTATION_GROWING_AREA_KINDS, RotationPlanting, evaluate_rotation
 from .schemas import CareNoteDraftRequest, PlantHealthAssessmentRequest, PlantKnowledgeAnswer, PlantKnowledgeQuestion, RotationGuidanceRequest, WorkspaceImport
 
 
@@ -25,6 +25,7 @@ def load_workspace(session: Session, workspace_id: str) -> Workspace | None:
         .options(
             selectinload(Workspace.gardens).selectinload(Garden.growing_areas),
             selectinload(Workspace.gardens).selectinload(Garden.plantings),
+            selectinload(Workspace.gardens).selectinload(Garden.season_plans).selectinload(SeasonPlan.plantings),
             selectinload(Workspace.gardens).selectinload(Garden.care_events),
             selectinload(Workspace.gardens).selectinload(Garden.care_tasks),
             selectinload(Workspace.gardens).selectinload(Garden.health_records),
@@ -126,7 +127,7 @@ def rotation_guidance(
         "season": payload.planting_date.year,
         "history": history,
         "warning": {"cropFamily": payload.crop_family, "plantings": warning_plantings} if evaluation["warning"] else None,
-        "automatedWarningSupported": area.kind in SOIL_GROWING_AREA_KINDS,
+        "automatedWarningSupported": area.kind in ROTATION_GROWING_AREA_KINDS,
         "hasAutomaticCompatibilityConclusion": evaluation["has_automatic_compatibility_conclusion"],
         "rotationFriendlyCropFamilies": evaluation["rotation_friendly_crop_families"],
     }
@@ -435,6 +436,24 @@ def write_workspace(workspace: Workspace, payload: WorkspaceImport) -> None:
                     growing_area=areas[planting_input.growing_area_id],
                 )
             )
+        for plan_input in garden_input.season_plans:
+            season_plan = SeasonPlan(
+                external_id=plan_input.id,
+                season_year=plan_input.season_year,
+            )
+            garden.season_plans.append(season_plan)
+            for position, planting_input in enumerate(plan_input.plantings):
+                season_plan.plantings.append(
+                    PlannedPlanting(
+                        external_id=planting_input.id,
+                        position=position,
+                        common_name=planting_input.common_name,
+                        plant_type=planting_input.plant_type,
+                        variety=planting_input.variety,
+                        crop_family=planting_input.crop_family,
+                        growing_area=areas[planting_input.growing_area_id],
+                    )
+                )
         for position, event_input in enumerate(garden_input.care_events):
             garden.care_events.append(
                 CareEvent(
@@ -527,6 +546,24 @@ def garden_response(garden: Garden) -> dict:
                 "isActive": planting.is_active,
             }
             for planting in garden.plantings
+        ],
+        "seasonPlans": [
+            {
+                "id": plan.external_id,
+                "seasonYear": plan.season_year,
+                "plantings": [
+                    {
+                        "id": planting.external_id,
+                        "commonName": planting.common_name,
+                        **({"plantType": planting.plant_type} if planting.plant_type is not None else {}),
+                        **({"variety": planting.variety} if planting.variety is not None else {}),
+                        "cropFamily": planting.crop_family,
+                        "growingAreaId": planting.growing_area.external_id,
+                    }
+                    for planting in plan.plantings
+                ],
+            }
+            for plan in garden.season_plans
         ],
         "careEvents": [care_event_response(event) for event in garden.care_events],
         "careTasks": [care_task_response(task) for task in garden.care_tasks],

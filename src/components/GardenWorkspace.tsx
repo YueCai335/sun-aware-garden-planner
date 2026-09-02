@@ -19,6 +19,7 @@ import {
   GARDEN_WORKSPACE_STORAGE_KEY,
   growingAreaKindLabels,
   growingAreaKinds,
+  linkCurrentLayoutPlants,
   plantingCropFamilies,
   plantingCropFamilyLabels,
   plantDisplayName,
@@ -106,10 +107,11 @@ export function GardenWorkspace() {
           setServerWorkspaceId(savedServerWorkspaceId);
           try {
             const serverWorkspace = await loadServerWorkspace(savedServerWorkspaceId);
-            const restored = readGardenWorkspace(JSON.stringify(serverWorkspace));
+            const serverSnapshot = JSON.stringify(serverWorkspace);
+            const restored = readGardenWorkspace(serverSnapshot);
             if (!restored) throw new Error("Invalid server workspace");
             if (!active) return;
-            queuedServerWorkspaceRef.current = JSON.stringify(restored);
+            queuedServerWorkspaceRef.current = serverSnapshot;
             setWorkspace(restored);
             setMessage("Gardens restored from PostgreSQL.");
           } catch {
@@ -589,12 +591,14 @@ export function GardenWorkspace() {
   };
 
   const updateAreaLayout = (areaId: string, layout: GrowingAreaLayout) => {
-    updateGarden((current) => ({
-      ...current,
-      growingAreas: current.growingAreas.map((area) =>
-        area.id === areaId ? { ...area, layout } : area,
-      ),
-    }));
+    updateGarden((current) =>
+      linkCurrentLayoutPlants({
+        ...current,
+        growingAreas: current.growingAreas.map((area) =>
+          area.id === areaId ? { ...area, layout } : area,
+        ),
+      }),
+    );
   };
 
   const openAddPlanting = (
@@ -661,27 +665,81 @@ export function GardenWorkspace() {
     clearTransientState();
   };
 
-  const recordSeasonPlant = (
+  const saveSeasonPlanPlant = (
     gardenId: string,
     growingAreaId: string,
-    cropFamily?: PlantingCropFamily,
+    choice: { plantType: string; cropFamily: PlantingCropFamily },
   ) => {
-    const targetGarden = workspace?.gardens.find((candidate) => candidate.id === gardenId);
-    if (!targetGarden) return;
-    setIsSeasonPlanner(false);
-    setIsManagement(true);
+    const planningYear = new Date().getFullYear() + 1;
     setWorkspace((current) =>
-      current ? { ...current, selectedGardenId: gardenId } : current,
+      current
+        ? {
+            ...current,
+            gardens: current.gardens.map((garden) => {
+              if (garden.id !== gardenId) return garden;
+              const plannedPlanting = {
+                id: createId("planned-planting"),
+                commonName: choice.plantType,
+                plantType: choice.plantType,
+                cropFamily: choice.cropFamily,
+                growingAreaId,
+              };
+              const existingPlan = garden.seasonPlans?.find(
+                (plan) => plan.seasonYear === planningYear,
+              );
+              return {
+                ...garden,
+                seasonPlans: existingPlan
+                  ? garden.seasonPlans?.map((plan) =>
+                      plan.id === existingPlan.id
+                        ? {
+                            ...plan,
+                            plantings: [...plan.plantings, plannedPlanting],
+                          }
+                        : plan,
+                    )
+                  : [
+                      ...(garden.seasonPlans ?? []),
+                      {
+                        id: createId("season-plan"),
+                        seasonYear: planningYear,
+                        plantings: [plannedPlanting],
+                      },
+                    ],
+              };
+            }),
+          }
+        : current,
     );
-    setEditingLayoutId(growingAreaId);
-    setPlantingForm({
-      ...emptyPlantingForm(),
-      cropFamily: cropFamily ?? "",
-      growingAreaId,
-    });
-    setRotationGuidance(undefined);
-    setEditingPlantingId(undefined);
-    setIsPlantingFormOpen(true);
+    setMessage(`${choice.plantType} added to the ${planningYear} plan.`);
+  };
+
+  const removeSeasonPlanPlant = (
+    gardenId: string,
+    seasonYear: number,
+    plantingId: string,
+  ) => {
+    setWorkspace((current) =>
+      current
+        ? {
+            ...current,
+            gardens: current.gardens.map((garden) => {
+              if (garden.id !== gardenId) return garden;
+              return {
+                ...garden,
+                seasonPlans: (garden.seasonPlans ?? []).flatMap((plan) => {
+                  if (plan.seasonYear !== seasonYear) return [plan];
+                  const plantings = plan.plantings.filter(
+                    (planting) => planting.id !== plantingId,
+                  );
+                  return plantings.length ? [{ ...plan, plantings }] : [];
+                }),
+              };
+            }),
+          }
+        : current,
+    );
+    setMessage("Plant removed from the season plan.");
   };
 
   const openEditPlanting = (planting: PlantingRecord) => {
@@ -1178,9 +1236,8 @@ export function GardenWorkspace() {
       ) : isSeasonPlanner ? (
         <SeasonPlanner
           gardens={workspace.gardens}
-          isServerBacked={storageSource === "server"}
-          onRecordPlant={recordSeasonPlant}
-          workspaceId={serverWorkspaceId}
+          onRemovePlan={removeSeasonPlanPlant}
+          onSavePlan={saveSeasonPlanPlant}
         />
       ) : isAiGardenNote ? (
         <AiGardenNote

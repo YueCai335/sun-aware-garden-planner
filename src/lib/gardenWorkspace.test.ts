@@ -6,10 +6,13 @@ import {
   allocationPlantColor,
   clampAllocationCenter,
   clampPlanPosition,
+  createDemoGardenWorkspace,
   createRectangularLayout,
   defaultPlantColor,
   defaultPlanPlacement,
   findDuplicatePlantPosition,
+  gardenPlanViewport,
+  inferPlantCropFamily,
   isPlantColor,
   plantDisplayName,
   normalizePlanRotation,
@@ -77,7 +80,17 @@ describe("readGardenWorkspace", () => {
           id: "garden-1",
           name: "Home garden",
           plan: { widthMeters: 8, depthMeters: 5 },
-          growingAreas: v3.growingAreas,
+          growingAreas: [
+            {
+              ...v3.growingAreas[0],
+              layout: {
+                ...v3.growingAreas[0].layout,
+                allocations: [
+                  { ...v3.growingAreas[0].layout.allocations[0], plantingRecordId: "planting-1" },
+                ],
+              },
+            },
+          ],
           plantings: v3.plantings,
           careEvents: [],
           careTasks: [],
@@ -85,6 +98,48 @@ describe("readGardenWorkspace", () => {
         },
       ],
     });
+  });
+
+  it("links legacy layout plants to current-season records for planning", () => {
+    const workspace = {
+      version: 10,
+      selectedGardenId: "garden-1",
+      gardens: [{
+        id: "garden-1",
+        name: "Back garden",
+        plan: { widthMeters: 4, depthMeters: 3 },
+        growingAreas: [{
+          id: "bed-1",
+          name: "Bed 1",
+          kind: "raised-bed",
+          planPlacement: { x: 0, y: 0, rotationDegrees: 0 },
+          layout: {
+            widthMeters: 2,
+            depthMeters: 1,
+            boundary: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 1 }],
+            allocations: [{ id: "sungold-1", label: "Sun Gold", plantType: "Tomato", variety: "Sun Gold", x: 1, y: 0.5, diameterMeters: 0.5 }],
+          },
+        }],
+        plantings: [],
+        careEvents: [],
+        careTasks: [],
+        healthRecords: [],
+      }],
+      careEvents: [],
+      careTasks: [],
+    };
+
+    const restored = readGardenWorkspace(JSON.stringify(workspace));
+    const garden = restored!.gardens[0];
+    expect(garden.plantings).toEqual([expect.objectContaining({
+      commonName: "Tomato · Sun Gold",
+      cropFamily: "nightshade",
+      quantity: 1,
+      growingAreaId: "bed-1",
+      isActive: true,
+    })]);
+    expect(garden.plantings[0].plantingDate).toMatch(new RegExp(`^${new Date().getFullYear()}-`));
+    expect(garden.growingAreas[0].layout!.allocations[0].plantingRecordId).toBe(garden.plantings[0].id);
   });
 
   it("keeps independent gardens and rejects a record linked outside its garden", () => {
@@ -540,6 +595,50 @@ describe("readGardenWorkspace", () => {
     expect(plantDisplayName({ plantType: "Tomato", variety: "Sun Gold", fallback: "Tomato" })).toBe("Tomato · Sun Gold");
     expect(isPlantColor("#d9534f")).toBe(true);
     expect(isPlantColor("tomato")).toBe(false);
+    expect(inferPlantCropFamily("番茄", "Sun Gold")).toBe("nightshade");
+    expect(inferPlantCropFamily("Tomato")).toBe("nightshade");
+    expect(inferPlantCropFamily("Sungold")).toBe("nightshade");
+    expect(inferPlantCropFamily("圆锥绣球")).toBe("other");
+  });
+
+  it("focuses a preview on measured growing areas while preserving a full-garden option", () => {
+    const workspace = createDemoGardenWorkspace();
+    const garden = workspace.gardens[0];
+
+    const focused = gardenPlanViewport(
+      garden.plan,
+      garden.growingAreas,
+      "growing-areas",
+    );
+    const full = gardenPlanViewport(garden.plan, garden.growingAreas, "full");
+
+    expect(focused.widthMeters).toBeLessThan(full.widthMeters);
+    expect(focused.depthMeters).toBeLessThanOrEqual(full.depthMeters);
+    expect(full).toEqual({ x: 0, y: 0, ...garden.plan });
+  });
+
+  it("moves future planting records into a season plan during workspace restore", () => {
+    const workspace = createDemoGardenWorkspace();
+    workspace.gardens[0].plantings[0].plantingDate = "2027-05-18";
+
+    const restored = readGardenWorkspace(JSON.stringify(workspace));
+
+    expect(restored?.gardens[0].plantings).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "demo-planting-tomatoes" }),
+      ]),
+    );
+    expect(restored?.gardens[0].seasonPlans).toEqual([
+      expect.objectContaining({
+        seasonYear: 2027,
+        plantings: [
+          expect.objectContaining({
+            commonName: "Tomatoes",
+            cropFamily: "nightshade",
+          }),
+        ],
+      }),
+    ]);
   });
 
   it("calculates task status and repeat dates from calendar dates", () => {

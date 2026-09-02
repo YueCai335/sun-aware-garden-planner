@@ -54,6 +54,9 @@ class Garden(Base):
     plantings: Mapped[list["Planting"]] = relationship(
         back_populates="garden", cascade="all, delete-orphan", order_by="Planting.position"
     )
+    season_plans: Mapped[list["SeasonPlan"]] = relationship(
+        back_populates="garden", cascade="all, delete-orphan", order_by="SeasonPlan.season_year"
+    )
     care_events: Mapped[list["CareEvent"]] = relationship(
         back_populates="garden", cascade="all, delete-orphan", order_by="CareEvent.position"
     )
@@ -101,6 +104,40 @@ class Planting(Base):
     is_active: Mapped[bool] = mapped_column(Boolean)
     garden: Mapped[Garden] = relationship(back_populates="plantings")
     growing_area: Mapped[GrowingArea] = relationship(back_populates="plantings")
+
+
+class SeasonPlan(Base):
+    __tablename__ = "season_plans"
+    __table_args__ = (
+        UniqueConstraint("garden_id", "external_id"),
+        UniqueConstraint("garden_id", "season_year"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    garden_id: Mapped[str] = mapped_column(ForeignKey("gardens.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    season_year: Mapped[int] = mapped_column(Integer)
+    garden: Mapped[Garden] = relationship(back_populates="season_plans")
+    plantings: Mapped[list["PlannedPlanting"]] = relationship(
+        back_populates="season_plan", cascade="all, delete-orphan", order_by="PlannedPlanting.position"
+    )
+
+
+class PlannedPlanting(Base):
+    __tablename__ = "planned_plantings"
+    __table_args__ = (UniqueConstraint("season_plan_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    season_plan_id: Mapped[str] = mapped_column(ForeignKey("season_plans.id", ondelete="CASCADE"), index=True)
+    growing_area_id: Mapped[str] = mapped_column(ForeignKey("growing_areas.id", ondelete="RESTRICT"))
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    common_name: Mapped[str] = mapped_column(String(200))
+    plant_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    variety: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    crop_family: Mapped[str] = mapped_column(String(32))
+    season_plan: Mapped[SeasonPlan] = relationship(back_populates="plantings")
+    growing_area: Mapped[GrowingArea] = relationship()
 
 
 class CareTargetFields:

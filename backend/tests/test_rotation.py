@@ -22,17 +22,21 @@ def test_soil_rotation_warns_for_a_repeated_family_in_the_three_preceding_season
     assert "brassica" in result["rotation_friendly_crop_families"]
 
 
-def test_other_and_non_soil_areas_keep_history_without_an_automated_warning():
+def test_container_areas_receive_an_advisory_rotation_warning():
     plantings = [planting("tomatoes", "nightshade", 2025)]
 
     container = evaluate_rotation(
         growing_area_kind="container", crop_family="nightshade", planting_date=date(2026, 5, 20), plantings=plantings
     )
+    assert container["warning"] is True
+    assert [record.id for record in container["history"]] == ["tomatoes"]
+
+
+def test_other_crop_families_keep_history_without_an_automated_warning():
+    plantings = [planting("tomatoes", "nightshade", 2025)]
     unknown = evaluate_rotation(
         growing_area_kind="in-ground", crop_family="other", planting_date=date(2026, 5, 20), plantings=plantings
     )
 
-    assert container["warning"] is False
-    assert [record.id for record in container["history"]] == ["tomatoes"]
     assert unknown["warning"] is False
     assert unknown["has_automatic_compatibility_conclusion"] is False

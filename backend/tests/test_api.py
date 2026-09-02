@@ -51,6 +51,7 @@ def workspace_payload():
                         "isActive": True,
                     }
                 ],
+                "seasonPlans": [],
                 "careEvents": [
                     {
                         "id": "event-1",
@@ -97,6 +98,41 @@ def test_import_persists_and_retrieves_complete_workspace(client):
     retrieved = client.get("/workspaces/local-workspace-1")
     assert retrieved.status_code == 200
     assert retrieved.json() == payload
+
+
+def test_import_preserves_a_layout_planting_record_link(client):
+    payload = workspace_payload()
+    payload["gardens"][0]["growingAreas"][0]["layout"]["allocations"][0]["plantingRecordId"] = "planting-1"
+
+    response = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert response.status_code == 201
+    assert response.json()["gardens"][0]["growingAreas"][0]["layout"]["allocations"][0]["plantingRecordId"] == "planting-1"
+
+
+def test_import_preserves_season_plan_separately_from_current_plantings(client):
+    payload = workspace_payload()
+    payload["gardens"][0]["seasonPlans"] = [
+        {
+            "id": "season-plan-2027",
+            "seasonYear": 2027,
+            "plantings": [
+                {
+                    "id": "planned-planting-1",
+                    "commonName": "Sungold",
+                    "plantType": "Sungold",
+                    "cropFamily": "nightshade",
+                    "growingAreaId": "bed-1",
+                }
+            ],
+        }
+    ]
+
+    response = client.put("/workspaces/local-workspace-1/import", json=payload)
+
+    assert response.status_code == 201
+    assert response.json() == payload
+    assert client.get("/workspaces/local-workspace-1").json() == payload
 
 
 def test_identical_import_retry_does_not_duplicate_rows(client):

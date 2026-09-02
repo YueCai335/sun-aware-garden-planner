@@ -31,6 +31,7 @@ class PlantAllocation(ApiModel):
     label: str = Field(min_length=1, max_length=200)
     plant_type: str | None = Field(default=None, min_length=1, max_length=200, serialization_alias="plantType", validation_alias="plantType")
     variety: str | None = Field(default=None, max_length=200)
+    planting_record_id: str | None = Field(default=None, min_length=1, max_length=120, serialization_alias="plantingRecordId", validation_alias="plantingRecordId")
     color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     x: float
     y: float
@@ -73,6 +74,21 @@ class PlantingInput(ApiModel):
     planting_date: Date = Field(serialization_alias="plantingDate", validation_alias="plantingDate")
     growing_area_id: str = Field(min_length=1, max_length=120, serialization_alias="growingAreaId", validation_alias="growingAreaId")
     is_active: bool = Field(serialization_alias="isActive", validation_alias="isActive")
+
+
+class PlannedPlantingInput(ApiModel):
+    id: str = Field(min_length=1, max_length=120)
+    common_name: str = Field(min_length=1, max_length=200, serialization_alias="commonName", validation_alias="commonName")
+    plant_type: str | None = Field(default=None, min_length=1, max_length=200, serialization_alias="plantType", validation_alias="plantType")
+    variety: str | None = Field(default=None, max_length=200)
+    crop_family: CropFamily = Field(serialization_alias="cropFamily", validation_alias="cropFamily")
+    growing_area_id: str = Field(min_length=1, max_length=120, serialization_alias="growingAreaId", validation_alias="growingAreaId")
+
+
+class SeasonPlanInput(ApiModel):
+    id: str = Field(min_length=1, max_length=120)
+    season_year: int = Field(ge=2000, le=2200, serialization_alias="seasonYear", validation_alias="seasonYear")
+    plantings: list[PlannedPlantingInput] = Field(default_factory=list)
 
 
 class CareTargetInput(ApiModel):
@@ -171,6 +187,7 @@ class GardenInput(ApiModel):
     plan: GardenPlan
     growing_areas: list[GrowingAreaInput] = Field(serialization_alias="growingAreas", validation_alias="growingAreas")
     plantings: list[PlantingInput]
+    season_plans: list[SeasonPlanInput] = Field(default_factory=list, serialization_alias="seasonPlans", validation_alias="seasonPlans")
     care_events: list[CareEventInput] = Field(serialization_alias="careEvents", validation_alias="careEvents")
     care_tasks: list[CareTaskInput] = Field(serialization_alias="careTasks", validation_alias="careTasks")
     health_records: list[HealthRecordInput] = Field(serialization_alias="healthRecords", validation_alias="healthRecords")
@@ -179,10 +196,19 @@ class GardenInput(ApiModel):
     def references_stay_in_the_garden(self):
         area_ids = {area.id for area in self.growing_areas}
         planting_ids = {planting.id for planting in self.plantings}
-        if len(area_ids) != len(self.growing_areas) or len(planting_ids) != len(self.plantings):
-            raise ValueError("growing area and planting ids must be unique within a garden")
+        plan_ids = {plan.id for plan in self.season_plans}
+        if len(area_ids) != len(self.growing_areas) or len(planting_ids) != len(self.plantings) or len(plan_ids) != len(self.season_plans):
+            raise ValueError("growing area, planting, and season plan ids must be unique within a garden")
         if any(planting.growing_area_id not in area_ids for planting in self.plantings):
             raise ValueError("each planting must reference a growing area in the same garden")
+        if len({plan.season_year for plan in self.season_plans}) != len(self.season_plans):
+            raise ValueError("one season plan is allowed for each garden and year")
+        if any(
+            planting.growing_area_id not in area_ids
+            for plan in self.season_plans
+            for planting in plan.plantings
+        ):
+            raise ValueError("each planned planting must reference a growing area in the same garden")
         for record in [*self.care_events, *self.care_tasks, *self.health_records]:
             if record.target_scope == "all-gardens":
                 raise ValueError("garden care records must target this garden or one of its contents")

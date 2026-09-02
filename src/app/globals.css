@@ -453,6 +453,33 @@ select {
   color: #1d2920;
 }
 
+.season-preview-mode {
+  display: inline-flex;
+  align-self: end;
+  overflow: hidden;
+  border: 1px solid #b8c5ba;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.season-preview-mode button {
+  border: 0;
+  border-right: 1px solid #b8c5ba;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #374034;
+  font-size: 14px;
+}
+
+.season-preview-mode button:last-child {
+  border-right: 0;
+}
+
+.season-preview-mode button[aria-pressed="true"] {
+  background: #276445;
+  color: #ffffff;
+}
+
 .season-planner-empty {
   border: 1px solid #cfd7ce;
   border-radius: 8px;
@@ -467,10 +494,7 @@ select {
   font-size: 18px;
 }
 
-.season-planner-empty p,
-.season-history,
-.season-candidates,
-.season-clear {
+.season-planner-empty p {
   margin: 10px 0 0;
   color: #657268;
   font-size: 14px;
@@ -493,20 +517,139 @@ select {
   background: #ffffff;
 }
 
-.season-history,
-.season-candidates {
+.season-summary-line,
+.season-selections {
   display: grid;
   gap: 4px;
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.season-history strong,
-.season-candidates strong {
+.season-summary-line strong,
+.season-selections strong {
   color: #374034;
 }
 
-.season-clear {
+.season-plant-choice {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid #dbe2d9;
+  padding-top: 16px;
+}
+
+.season-selections {
+  border-top: 1px solid #dbe2d9;
+  padding-top: 16px;
+}
+
+.season-garden-grid {
+  display: grid;
+  gap: 30px;
+}
+
+.season-garden-section {
+  display: grid;
+  gap: 18px;
+}
+
+.season-garden-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.season-garden-heading h3 {
+  margin: 0;
+  color: #183a2a;
+  font-size: 22px;
+}
+
+.season-garden-heading span {
+  color: #657268;
+  font-size: 14px;
+}
+
+.season-garden-preview-wrap {
+  overflow: auto;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.season-garden-preview {
+  display: block;
+  min-width: 620px;
+  width: 100%;
+  min-height: 220px;
+}
+
+.season-garden-boundary {
+  fill: #f8fbf6;
+  stroke: #183a2a;
+}
+
+.season-garden-area {
+  fill: #dcebdc;
+  stroke: #276445;
+}
+
+.season-garden-area-label {
+  fill: #183a2a;
+  font-weight: 700;
+}
+
+.season-garden-plant {
+  stroke: #183a2a;
+}
+
+.season-garden-plant-label {
+  fill: #183a2a;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.season-selections ul {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.season-selections li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.season-crop-family {
+  margin: 0;
+  color: #374034;
+  font-size: 14px;
+}
+
+.pairing-note {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pairing-note a {
+  font-weight: 700;
+}
+
+.pairing-note-helpful,
+.pairing-note-space {
   color: #276445;
-  font-weight: 600;
+}
+
+.pairing-note-caution {
+  color: #8a4720;
 }
 
 .dashboard-heading {

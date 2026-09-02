@@ -58,7 +58,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md) | Prioritize garden operations and AI planning | Accepted |
 | [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md) | Use metric planting layouts with grid snapping | Accepted |
 | [ADR-0015](0015-use-a-metric-garden-plan-overview.md) | Use a metric garden plan overview | Superseded by ADR-0017 |
-| [ADR-0016](0016-separate-planting-records-from-layout-allocations.md) | Separate planting records from layout allocations | Accepted |
+| [ADR-0016](0016-separate-planting-records-from-layout-allocations.md) | Separate planting records from layout allocations | Superseded by ADR-0038 |
 | [ADR-0017](0017-use-a-multi-garden-home-and-management-workspace.md) | Use a visual multi-garden home and dedicated management workspace | Superseded by ADR-0018 |
 | [ADR-0018](0018-use-a-multi-garden-thumbnail-dashboard.md) | Use a multi-garden thumbnail dashboard and selected-garden operations | Superseded by ADR-0021 |
 | [ADR-0019](0019-use-targeted-care-events-for-watering-and-fertilizing.md) | Use targeted care events for watering and fertilizing | Superseded by ADR-0020 |
@@ -68,7 +68,7 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0023](0023-keep-care-history-as-completed-record.md) | Keep care history as the completed-care record | Accepted |
 | [ADR-0024](0024-use-explicit-local-garden-import-for-postgresql.md) | Use an explicit local-garden import for PostgreSQL | Accepted |
 | [ADR-0025](0025-use-three-season-crop-rotation-warnings.md) | Use three-season crop rotation warnings | Accepted |
-| [ADR-0026](0026-use-a-next-season-planning-workspace.md) | Use a next-season planning workspace for crop rotation | Accepted |
+| [ADR-0026](0026-use-a-next-season-planning-workspace.md) | Use a next-season planning workspace for crop rotation | Superseded by ADR-0039 |
 | [ADR-0027](0027-use-persistent-plant-colors-and-garden-plan-zoom.md) | Use persistent plant colors and Garden Plan zoom | Accepted |
 | [ADR-0028](0028-use-plant-types-varieties-and-bilingual-color-aliases.md) | Use plant types, varieties, and bilingual color aliases | Accepted |
 | [ADR-0029](0029-use-a-thumbnail-first-garden-hub.md) | Use a thumbnail-first Garden Hub | Accepted |
@@ -79,6 +79,10 @@ changes, mark the old record as superseded and add a new record.
 | [ADR-0034](0034-use-workspace-and-garden-care-targets.md) | Use workspace and garden care targets | Accepted |
 | [ADR-0035](0035-use-reviewable-plant-health-records.md) | Use reviewable plant health records | Accepted |
 | [ADR-0036](0036-use-curated-local-rag-for-plant-knowledge.md) | Use curated local RAG for plant knowledge | Accepted |
+| [ADR-0037](0037-use-area-summary-and-pairing-notes-for-season-planning.md) | Use area summaries and pairing notes for season planning | Superseded by ADR-0039 |
+| [ADR-0038](0038-link-current-plantings-to-layout-positions.md) | Link current plantings to layout positions | Accepted |
+| [ADR-0039](0039-use-separate-season-plans-for-future-planting.md) | Use separate season plans for future planting | Accepted |
+| [ADR-0040](0040-use-vercel-render-and-supabase-for-the-portfolio-demo.md) | Use Vercel, Render, and Supabase for the portfolio demo | Accepted |
 
 ## Interview Use
 

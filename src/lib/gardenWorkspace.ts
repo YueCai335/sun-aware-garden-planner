@@ -16,6 +16,7 @@ export type PlantAllocation = {
   label: string;
   plantType?: string;
   variety?: string;
+  plantingRecordId?: string;
   color?: string;
   x: number;
   y: number;
@@ -123,6 +124,13 @@ export type GrowingAreaLayout = {
   allocations: PlantAllocation[];
 };
 export type GardenPlan = { widthMeters: number; depthMeters: number };
+export type GardenPlanViewMode = "full" | "growing-areas";
+export type GardenPlanViewport = {
+  x: number;
+  y: number;
+  widthMeters: number;
+  depthMeters: number;
+};
 export type GrowingArea = {
   id: string;
   name: string;
@@ -130,6 +138,57 @@ export type GrowingArea = {
   planPlacement: PlanPlacement;
   layout?: GrowingAreaLayout;
 };
+
+export function gardenPlanViewport(
+  plan: GardenPlan,
+  growingAreas: GrowingArea[],
+  viewMode: GardenPlanViewMode,
+): GardenPlanViewport {
+  if (viewMode === "full") {
+    return { x: 0, y: 0, ...plan };
+  }
+
+  const points = growingAreas.flatMap((area) => {
+    if (!area.layout) return [];
+    const angle = (area.planPlacement.rotationDegrees * Math.PI) / 180;
+    return area.layout.boundary.map((point) => ({
+      x:
+        area.planPlacement.x +
+        point.x * Math.cos(angle) -
+        point.y * Math.sin(angle),
+      y:
+        area.planPlacement.y +
+        point.x * Math.sin(angle) +
+        point.y * Math.cos(angle),
+    }));
+  });
+  if (!points.length) return { x: 0, y: 0, ...plan };
+
+  const left = Math.min(...points.map((point) => point.x));
+  const right = Math.max(...points.map((point) => point.x));
+  const top = Math.min(...points.map((point) => point.y));
+  const bottom = Math.max(...points.map((point) => point.y));
+  const widthMeters = Math.max(right - left, 0.5);
+  const depthMeters = Math.max(bottom - top, 0.5);
+  const padding = Math.max(0.3, Math.max(widthMeters, depthMeters) * 0.15);
+  const areasStayWithinPlan =
+    left >= 0 && top >= 0 && right <= plan.widthMeters && bottom <= plan.depthMeters;
+  const frameLeft = areasStayWithinPlan ? Math.max(0, left - padding) : left - padding;
+  const frameRight = areasStayWithinPlan
+    ? Math.min(plan.widthMeters, right + padding)
+    : right + padding;
+  const frameTop = areasStayWithinPlan ? Math.max(0, top - padding) : top - padding;
+  const frameBottom = areasStayWithinPlan
+    ? Math.min(plan.depthMeters, bottom + padding)
+    : bottom + padding;
+
+  return {
+    x: frameLeft,
+    y: frameTop,
+    widthMeters: frameRight - frameLeft,
+    depthMeters: frameBottom - frameTop,
+  };
+}
 
 export const plantingCropFamilies = [
   "nightshade",
@@ -152,6 +211,19 @@ export type PlantingRecord = {
   plantingDate: string;
   growingAreaId: string;
   isActive: boolean;
+};
+export type PlannedPlanting = {
+  id: string;
+  commonName: string;
+  plantType?: string;
+  variety?: string;
+  cropFamily: PlantingCropFamily;
+  growingAreaId: string;
+};
+export type SeasonPlan = {
+  id: string;
+  seasonYear: number;
+  plantings: PlannedPlanting[];
 };
 export const careEventTypes = ["watering", "fertilizing"] as const;
 export type CareEventType = (typeof careEventTypes)[number];
@@ -217,6 +289,7 @@ export type Garden = {
   plan: GardenPlan;
   growingAreas: GrowingArea[];
   plantings: PlantingRecord[];
+  seasonPlans?: SeasonPlan[];
   careEvents: CareEvent[];
   careTasks: CareTask[];
   healthRecords: HealthRecord[];
@@ -320,6 +393,29 @@ export const plantingCropFamilyLabels: Record<PlantingCropFamily, string> = {
   other: "Other or unknown",
 };
 
+const cropFamilyAliases: Array<{
+  family: PlantingCropFamily;
+  aliases: string[];
+}> = [
+  { family: "nightshade", aliases: ["tomato", "番茄", "西红柿", "sungold", "sun gold", "pepper", "辣椒", "茄子", "eggplant", "potato", "土豆"] },
+  { family: "brassica", aliases: ["kale", "羽衣甘蓝", "cabbage", "卷心菜", "broccoli", "西兰花", "cauliflower", "菜花"] },
+  { family: "cucurbit", aliases: ["squash", "南瓜", "西葫芦", "cucumber", "黄瓜", "melon", "甜瓜"] },
+  { family: "legume", aliases: ["bean", "豆角", "四季豆", "pea", "豌豆"] },
+  { family: "allium", aliases: ["onion", "洋葱", "garlic", "大蒜", "leek", "韭葱"] },
+  { family: "root", aliases: ["carrot", "胡萝卜", "beet", "甜菜", "radish", "萝卜"] },
+  { family: "leafy", aliases: ["lettuce", "生菜", "莴笋", "spinach", "菠菜"] },
+];
+
+export function inferPlantCropFamily(
+  plantType: string,
+  variety = "",
+): PlantingCropFamily {
+  const normalized = `${plantType} ${variety}`.toLocaleLowerCase();
+  return cropFamilyAliases.find(({ aliases }) =>
+    aliases.some((alias) => normalized.includes(alias)),
+  )?.family ?? "other";
+}
+
 export function createGarden(name: string): Garden {
   return {
     id: createId("garden"),
@@ -327,6 +423,7 @@ export function createGarden(name: string): Garden {
     plan: { ...DEFAULT_GARDEN_PLAN },
     growingAreas: [],
     plantings: [],
+    seasonPlans: [],
     careEvents: [],
     careTasks: [],
     healthRecords: [],
@@ -404,12 +501,89 @@ export function createDemoGardenWorkspace(): GardenWorkspace {
         isActive: true,
       },
     ],
+    seasonPlans: [],
     careEvents: [],
     careTasks: [],
     healthRecords: [],
   };
 
   return { version: 10, selectedGardenId: garden.id, gardens: [garden], careEvents: [], careTasks: [] };
+}
+
+export function linkCurrentLayoutPlants(
+  garden: Garden,
+  plantingDate = todayDate(),
+): Garden {
+  let plantings = [...garden.plantings];
+  const growingAreas = garden.growingAreas.map((area) => {
+    if (!area.layout?.allocations.length) return area;
+
+    const groups = new Map<string, PlantAllocation[]>();
+    for (const allocation of area.layout.allocations) {
+      const key = layoutPlantIdentity(allocation);
+      groups.set(key, [...(groups.get(key) ?? []), allocation]);
+    }
+
+    const allocations = area.layout.allocations.map((allocation) => ({ ...allocation }));
+    for (const groupedAllocations of groups.values()) {
+      const sample = groupedAllocations[0];
+      const linkedRecord = sample.plantingRecordId
+        ? plantings.find((planting) => planting.id === sample.plantingRecordId)
+        : undefined;
+      const existing = linkedRecord ?? plantings.find((planting) =>
+        planting.growingAreaId === area.id &&
+        planting.isActive &&
+        sameLayoutPlant(planting, sample),
+      );
+      const record = existing ?? {
+        id: createId("planting"),
+        commonName: plantDisplayName({
+          plantType: sample.plantType ?? sample.label,
+          variety: sample.variety,
+          fallback: sample.label,
+        }),
+        plantType: sample.plantType ?? sample.label,
+        ...(sample.variety ? { variety: sample.variety } : {}),
+        cropFamily: inferPlantCropFamily(
+          sample.plantType ?? sample.label,
+          sample.variety,
+        ),
+        quantity: groupedAllocations.length,
+        plantingDate,
+        growingAreaId: area.id,
+        isActive: true,
+      } satisfies PlantingRecord;
+      if (!existing) plantings = [...plantings, record];
+
+      for (const allocation of allocations) {
+        if (layoutPlantIdentity(allocation) === layoutPlantIdentity(sample)) {
+          allocation.plantingRecordId = record.id;
+        }
+      }
+    }
+
+    return { ...area, layout: { ...area.layout, allocations } };
+  });
+
+  return { ...garden, growingAreas, plantings };
+}
+
+function layoutPlantIdentity(allocation: PlantAllocation) {
+  return `${allocation.plantType ?? allocation.label}\u0000${allocation.variety ?? ""}`
+    .trim()
+    .toLocaleLowerCase();
+}
+
+function sameLayoutPlant(planting: PlantingRecord, allocation: PlantAllocation) {
+  const plantingType = normalizedPlantType(planting.plantType ?? planting.commonName);
+  const allocationType = normalizedPlantType(allocation.plantType ?? allocation.label);
+  if (plantingType !== allocationType) return false;
+  if (!allocation.variety || !planting.variety) return true;
+  return planting.variety.trim().toLocaleLowerCase() === allocation.variety.trim().toLocaleLowerCase();
+}
+
+function normalizedPlantType(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/es$/, "").replace(/s$/, "");
 }
 
 export function createRectangularLayout(
@@ -588,29 +762,29 @@ export function readGardenWorkspace(
 
   try {
     const parsed: unknown = JSON.parse(value);
-    if (isGardenWorkspace(parsed)) return parsed;
+    if (isGardenWorkspace(parsed)) return linkWorkspaceLayoutPlants(parsed);
     if (isVersion9GardenWorkspace(parsed))
-      return migrateVersion9GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion9GardenWorkspace(parsed));
     if (isVersion8GardenWorkspace(parsed))
-      return migrateVersion8GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion8GardenWorkspace(parsed));
     if (isVersion7GardenWorkspace(parsed))
-      return migrateVersion7GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion7GardenWorkspace(parsed));
     if (isVersion6GardenWorkspace(parsed))
-      return migrateVersion6GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion6GardenWorkspace(parsed));
     if (isVersion5GardenWorkspace(parsed))
-      return migrateVersion5GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion5GardenWorkspace(parsed));
     if (isVersion4GardenWorkspace(parsed))
-      return migrateVersion4GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion4GardenWorkspace(parsed));
     if (isVersion3GardenWorkspace(parsed))
-      return migrateVersion3GardenWorkspace(parsed);
+      return linkWorkspaceLayoutPlants(migrateVersion3GardenWorkspace(parsed));
     if (isVersion2GardenWorkspace(parsed))
-      return migrateVersion3GardenWorkspace({
+      return linkWorkspaceLayoutPlants(migrateVersion3GardenWorkspace({
         ...parsed,
         version: 3,
         plantings: [],
-      });
+      }));
     if (isLegacyGardenWorkspace(parsed)) {
-      return migrateVersion3GardenWorkspace({
+      return linkWorkspaceLayoutPlants(migrateVersion3GardenWorkspace({
         version: 3,
         garden: { ...parsed.garden, plan: { ...DEFAULT_GARDEN_PLAN } },
         growingAreas: parsed.growingAreas.map((area, index) => ({
@@ -618,12 +792,70 @@ export function readGardenWorkspace(
           planPlacement: defaultPlanPlacement(index),
         })),
         plantings: [],
-      });
+      }));
     }
     return undefined;
   } catch {
     return undefined;
   }
+}
+
+function linkWorkspaceLayoutPlants(workspace: GardenWorkspace): GardenWorkspace {
+  return {
+    ...workspace,
+    gardens: workspace.gardens.map((garden) =>
+      linkCurrentLayoutPlants(moveFuturePlantingsToSeasonPlans(garden)),
+    ),
+  };
+}
+
+export function moveFuturePlantingsToSeasonPlans(
+  garden: Garden,
+  currentYear = new Date().getFullYear(),
+): Garden {
+  const plansByYear = new Map<number, SeasonPlan>();
+  for (const plan of garden.seasonPlans ?? []) {
+    plansByYear.set(plan.seasonYear, { ...plan, plantings: [...plan.plantings] });
+  }
+
+  const currentPlantings: PlantingRecord[] = [];
+  for (const planting of garden.plantings) {
+    const plantingYear = Number(planting.plantingDate.slice(0, 4));
+    if (plantingYear <= currentYear) {
+      currentPlantings.push(planting);
+      continue;
+    }
+    const plan = plansByYear.get(plantingYear) ?? {
+      id: `season-plan-${garden.id}-${plantingYear}`,
+      seasonYear: plantingYear,
+      plantings: [],
+    } satisfies SeasonPlan;
+    if (!plansByYear.has(plantingYear)) plansByYear.set(plantingYear, plan);
+    if (!plan.plantings.some((candidate) => candidate.id === planting.id)) {
+      plan.plantings.push({
+        id: planting.id,
+        commonName: planting.commonName,
+        ...(planting.plantType ? { plantType: planting.plantType } : {}),
+        ...(planting.variety ? { variety: planting.variety } : {}),
+        cropFamily: planting.cropFamily,
+        growingAreaId: planting.growingAreaId,
+      });
+    }
+  }
+
+  return {
+    ...garden,
+    plantings: currentPlantings,
+    ...(
+      plansByYear.size || garden.seasonPlans !== undefined
+        ? {
+            seasonPlans: [...plansByYear.values()].sort(
+              (left, right) => left.seasonYear - right.seasonYear,
+            ),
+          }
+        : {}
+    ),
+  };
 }
 
 function migrateVersion3GardenWorkspace(
@@ -883,6 +1115,11 @@ function isGarden(value: unknown): value is Garden {
         (value as Garden).growingAreas,
         (value as Garden).plantings,
       ) &&
+      ((value as Garden).seasonPlans === undefined ||
+        (Array.isArray((value as Garden).seasonPlans) &&
+          (value as Garden).seasonPlans!.every((plan) =>
+            isSeasonPlan(plan, (value as Garden).growingAreas),
+          ))) &&
       Array.isArray((value as Garden).careEvents) &&
       (value as Garden).careEvents.every((event) =>
         isCareEvent(
@@ -907,6 +1144,35 @@ function isGarden(value: unknown): value is Garden {
           (value as Garden).plantings,
         ),
       ),
+  );
+}
+
+function isSeasonPlan(value: unknown, growingAreas: GrowingArea[]): value is SeasonPlan {
+  if (!value || typeof value !== "object") return false;
+  const plan = value as Partial<SeasonPlan>;
+  return (
+    typeof plan.id === "string" &&
+    Boolean(plan.id.trim()) &&
+    Number.isInteger(plan.seasonYear) &&
+    (plan.seasonYear ?? 0) > 2000 &&
+    Array.isArray(plan.plantings) &&
+    plan.plantings.every((planting) => isPlannedPlanting(planting, growingAreas))
+  );
+}
+
+function isPlannedPlanting(value: unknown, growingAreas: GrowingArea[]): value is PlannedPlanting {
+  if (!value || typeof value !== "object") return false;
+  const planting = value as Partial<PlannedPlanting>;
+  return (
+    typeof planting.id === "string" &&
+    Boolean(planting.id.trim()) &&
+    typeof planting.commonName === "string" &&
+    Boolean(planting.commonName.trim()) &&
+    (planting.plantType === undefined || typeof planting.plantType === "string") &&
+    (planting.variety === undefined || typeof planting.variety === "string") &&
+    Boolean(planting.cropFamily && plantingCropFamilies.includes(planting.cropFamily)) &&
+    typeof planting.growingAreaId === "string" &&
+    growingAreas.some((area) => area.id === planting.growingAreaId)
   );
 }
 

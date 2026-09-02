@@ -11,7 +11,7 @@ KNOWN_CROP_FAMILIES = (
     "root",
     "leafy",
 )
-SOIL_GROWING_AREA_KINDS = {"raised-bed", "in-ground"}
+ROTATION_GROWING_AREA_KINDS = {"raised-bed", "in-ground", "container"}
 
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ def evaluate_rotation(
         planting for planting in history if crop_family != "other" and planting.crop_family == crop_family
     ]
     warning = (
-        growing_area_kind in SOIL_GROWING_AREA_KINDS
+        growing_area_kind in ROTATION_GROWING_AREA_KINDS
         and crop_family != "other"
         and bool(repeated_plantings)
     )

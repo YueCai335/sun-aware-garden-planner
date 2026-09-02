@@ -7,10 +7,13 @@ import type { KonvaEventObject } from "konva/lib/Node";
 import {
   allocationPlantColor,
   clampPlanPosition,
+  gardenPlanViewport,
   normalizePlanRotation,
   snapToGrid,
   validateGardenPlanDimensions,
   type GardenPlan,
+  type GardenPlanViewMode,
+  type GardenPlanViewport,
   type GrowingArea,
   type PlanPlacement,
 } from "@/lib/gardenWorkspace";
@@ -78,6 +81,7 @@ export function GardenPlanOverview({
           onMove={() => undefined}
           onSelect={() => undefined}
           plan={plan}
+          viewMode="growing-areas"
           zoom={1}
         />
       </div>
@@ -230,6 +234,7 @@ export function GardenPlanOverview({
               onSelectAllocation={setSelectedAllocationId}
               plan={plan}
               selectedAllocationId={selectedAllocationId}
+              viewMode="full"
               zoom={zoom}
             />
           </div>
@@ -336,6 +341,7 @@ type GardenPlanCanvasProps = {
   onSelectAllocation?: (allocationId: string) => void;
   onEditLayout?: (areaId: string) => void;
   selectedAllocationId?: string;
+  viewMode: GardenPlanViewMode;
   zoom: number;
 };
 
@@ -349,12 +355,14 @@ function GardenPlanCanvas({
   onSelectAllocation,
   onEditLayout,
   selectedAllocationId,
+  viewMode,
   zoom,
 }: GardenPlanCanvasProps) {
   const padding = compact ? 14 : CANVAS_PADDING;
-  const scale = pixelsPerMeter(plan, compact) * zoom;
-  const width = plan.widthMeters * scale + padding * 2;
-  const height = plan.depthMeters * scale + padding * 2;
+  const viewport = gardenPlanViewport(plan, growingAreas, viewMode);
+  const scale = pixelsPerMeter(viewport, compact) * zoom;
+  const width = viewport.widthMeters * scale + padding * 2;
+  const height = viewport.depthMeters * scale + padding * 2;
   const verticalGrid = compact ? [] : Array.from(
     { length: Math.floor(plan.widthMeters) + 1 },
     (_, index) => index,
@@ -378,8 +386,8 @@ function GardenPlanCanvas({
           stroke="#183a2a"
           strokeWidth={2}
           width={plan.widthMeters * scale}
-          x={padding}
-          y={padding}
+          x={padding - viewport.x * scale}
+          y={padding - viewport.y * scale}
         />
         {!compact && verticalGrid.map((metre) => (
           <Line
@@ -442,8 +450,8 @@ function GardenPlanCanvas({
             onDragEnd={(event) => onMove(area.id, event)}
             onTap={() => onSelect(area.id)}
             rotation={area.planPlacement.rotationDegrees}
-            x={padding + area.planPlacement.x * scale}
-            y={padding + area.planPlacement.y * scale}
+            x={padding + (area.planPlacement.x - viewport.x) * scale}
+            y={padding + (area.planPlacement.y - viewport.y) * scale}
           >
             <Line
               closed
@@ -497,7 +505,7 @@ function GardenPlanCanvas({
           </Group>
         ))}
         {!compact && measuredAreas.map((area) => {
-          const label = areaLabelPosition(area, scale, padding);
+          const label = areaLabelPosition(area, scale, padding, viewport);
           return (
             <Text
               align="center"
@@ -522,8 +530,8 @@ function GardenPlanCanvas({
             fill="#657268"
             fontSize={14}
             text="Set up a measured layout in Garden Management to show it here."
-            x={padding + 16}
-            y={padding + 16}
+            x={padding + (16 - viewport.x) * scale}
+            y={padding + (16 - viewport.y) * scale}
           />
         ) : null}
       </Layer>
@@ -535,11 +543,16 @@ function allocationKey(areaId: string, allocationId: string) {
   return `${areaId}:${allocationId}`;
 }
 
-function areaLabelPosition(area: GrowingArea, scale: number, padding: number) {
+function areaLabelPosition(
+  area: GrowingArea,
+  scale: number,
+  padding: number,
+  viewport: GardenPlanViewport,
+) {
   const angle = (area.planPlacement.rotationDegrees * Math.PI) / 180;
   const origin = {
-    x: padding + area.planPlacement.x * scale,
-    y: padding + area.planPlacement.y * scale,
+    x: padding + (area.planPlacement.x - viewport.x) * scale,
+    y: padding + (area.planPlacement.y - viewport.y) * scale,
   };
   const points = area.layout!.boundary.map((point) => ({
     x: origin.x + point.x * scale * Math.cos(angle) - point.y * scale * Math.sin(angle),
@@ -554,7 +567,10 @@ function areaLabelPosition(area: GrowingArea, scale: number, padding: number) {
   return { width, x: (left + right - width) / 2, y };
 }
 
-function pixelsPerMeter(plan: GardenPlan, compact = false) {
+function pixelsPerMeter(
+  plan: Pick<GardenPlan, "widthMeters" | "depthMeters">,
+  compact = false,
+) {
   const maxWidth = compact ? 210 : 760;
   const maxDepth = compact ? 150 : 460;
   const maxScale = compact ? 28 : 82;

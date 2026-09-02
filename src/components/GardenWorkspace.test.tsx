@@ -52,7 +52,8 @@ describe("GardenWorkspace", () => {
     await screen.findByText("Gardens imported. PostgreSQL now saves this workspace.");
     const importedPayload = JSON.parse(String(fetch.mock.calls[0][1]?.body));
     expect(fetch.mock.calls[0][0]).toMatch(/\/import$/);
-    expect(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY)).toBe(JSON.stringify(workspace));
+    const savedBrowserWorkspace = JSON.parse(window.localStorage.getItem(GARDEN_WORKSPACE_STORAGE_KEY)!);
+    expect(savedBrowserWorkspace.gardens[0].growingAreas[0].layout.allocations[0].plantingRecordId).toBe("demo-planting-tomatoes");
     expect(window.localStorage.getItem(SERVER_WORKSPACE_STORAGE_KEY)).toBe(importedPayload.workspaceId);
 
     await user.clear(screen.getByLabelText("Garden name"));
@@ -688,7 +689,7 @@ describe("GardenWorkspace", () => {
     expect(screen.queryByText(/Rotation-friendly family candidates/)).not.toBeInTheDocument();
   });
 
-  it("opens Next season planner from the dashboard and carries a selected family into the plant record", async () => {
+  it("saves next-season choices separately from current plant records and shows pairing notes", async () => {
     const user = userEvent.setup();
     const workspace = createDemoGardenWorkspace();
     workspace.gardens[0].plantings[0].plantingDate = "2024-05-18";
@@ -718,14 +719,58 @@ describe("GardenWorkspace", () => {
     await screen.findByRole("button", { name: "Plan next season" });
     await user.click(screen.getByRole("button", { name: "Plan next season" }));
     await screen.findByRole("heading", { name: "Next season planner" });
+    expect(screen.getByRole("button", { name: "Planting areas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Full garden" }));
+    expect(screen.getByRole("button", { name: "Full garden" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     const raisedBed = screen.getByRole("heading", { name: "Sample raised bed" }).closest("article")!;
-    await user.selectOptions(within(raisedBed).getByLabelText("Planned crop family"), "nightshade");
-    expect(await within(raisedBed).findByText(/Rotation alert: Nightshade/)).toBeInTheDocument();
-    await user.click(within(raisedBed).getByRole("button", { name: "Record a plant" }));
+    expect(within(raisedBed).getByText("Last season")).toBeInTheDocument();
+    expect(within(raisedBed).getByText("Avoid if possible")).toBeInTheDocument();
+    expect(within(raisedBed).getByText("Good rotation fit")).toBeInTheDocument();
+    await user.click(within(raisedBed).getByRole("button", { name: "Choose a plant" }));
+    await user.type(within(raisedBed).getByLabelText("Plant type"), "Tomato");
+    expect(within(raisedBed).getByText(/Crop family:/)).toHaveTextContent("Nightshade");
+    expect(within(raisedBed).getByText(/automatic/)).toBeInTheDocument();
+    await user.click(within(raisedBed).getByRole("button", { name: `Add to ${new Date().getFullYear() + 1} plan` }));
 
-    const form = screen.getByRole("heading", { name: "Add plant" }).closest("form")!;
-    expect(within(form).getByLabelText("Crop family")).toHaveValue("nightshade");
+    const updatedRaisedBed = screen.getByRole("heading", { name: "Sample raised bed" }).closest("article")!;
+    expect(within(updatedRaisedBed).getByText(`${new Date().getFullYear() + 1} plan`)).toBeInTheDocument();
+    expect(within(updatedRaisedBed).getByText("Tomato")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", {
+        name: `${new Date().getFullYear() + 1} plan preview for Demo Garden`,
+      }),
+    ).toBeInTheDocument();
+    const areaLabel = screen.getByTestId("season-area-label-demo-raised-bed");
+    expect(Number(areaLabel.getAttribute("y"))).toBeLessThan(1);
+    expect(screen.queryByRole("heading", { name: "Add plant" })).not.toBeInTheDocument();
+    await user.click(within(updatedRaisedBed).getByRole("button", { name: "Choose a plant" }));
+    await user.type(within(updatedRaisedBed).getByLabelText("Plant type"), "Basil");
+    await user.click(within(updatedRaisedBed).getByRole("button", { name: `Add to ${new Date().getFullYear() + 1} plan` }));
+
+    const pairedRaisedBed = (await screen.findByRole("heading", { name: "Sample raised bed" })).closest("article")!;
+    expect(within(pairedRaisedBed).getByText(/Tomato \+ basil/)).toBeInTheDocument();
+  });
+
+  it("uses current layout plants as last-season history without waiting for a server request", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      GARDEN_WORKSPACE_STORAGE_KEY,
+      JSON.stringify(createDemoGardenWorkspace()),
+    );
+
+    render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Plan next season" }));
+
+    const raisedBed = screen.getByRole("heading", { name: "Sample raised bed" }).closest("article")!;
+    expect(within(raisedBed).getByText("Tomatoes")).toBeInTheDocument();
+    expect(within(raisedBed).getByText("Nightshade (tomato, pepper, eggplant)")).toBeInTheDocument();
   });
 
   it("supports direct plant selection, editing, duplication, and canvas removal in the layout editor", async () => {

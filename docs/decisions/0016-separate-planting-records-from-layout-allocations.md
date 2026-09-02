@@ -1,6 +1,6 @@
 # ADR-0016: Separate Planting Records From Layout Allocations
 
-- Status: Accepted
+- Status: Superseded by [ADR-0038](0038-link-current-plantings-to-layout-positions.md)
 - Date: 2026-08-30
 - Related: [ADR-0013](0013-prioritize-garden-operations-and-ai-planning.md), [ADR-0014](0014-use-metric-planting-layouts-with-grid-snapping.md), and [ADR-0015](0015-use-a-metric-garden-plan-overview.md)
 
