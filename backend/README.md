@@ -75,6 +75,25 @@ local `qwen3:4b` model currently uses the written observation only. The
 frontend presents the assessment for editing before it is saved in the
 garden's health history.
 
+`POST /workspaces/{workspaceId}/plant-knowledge/answer` accepts a Chinese or
+English plant-care question plus an optional garden context. It retrieves
+curated knowledge cards from PostgreSQL with pgvector, asks the local model to
+answer from that evidence, and returns the answer with visible source
+citations. Before using this endpoint on the Mac host, install the free local
+embedding model:
+
+```bash
+ollama pull embeddinggemma
+```
+
+The seed cards are short project-authored summaries linked to the original
+University of Minnesota Extension and Canadian Food Inspection Agency pages.
+They are defined in `app/knowledge.py` and stored with their publisher, URL,
+and review date. The first corpus is intentionally small and covers common
+care, prevention, and observation questions. It asks follow-up questions when
+retrieval is weak and leaves diagnoses, chemical treatment, and local
+regulatory guidance to appropriate expert resources.
+
 The request body preserves the existing browser naming convention. A compact
 example is:
 

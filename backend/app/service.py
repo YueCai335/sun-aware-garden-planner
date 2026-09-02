@@ -1,14 +1,16 @@
 import hashlib
 import json
+from math import sqrt
 
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from .ai import CareNoteExtractor, PlantHealthAssessor, complete_known_care_note_fields
-from .models import CareEvent, CareTask, Garden, GrowingArea, HealthRecord, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
+from .ai import CareNoteExtractor, EmbeddingClient, PlantHealthAssessor, PlantKnowledgeAnswerer, complete_known_care_note_fields
+from .knowledge import SEED_KNOWLEDGE_CARDS
+from .models import CareEvent, CareTask, Garden, GrowingArea, HealthRecord, KnowledgeChunk, KnowledgeSource, Planting, Workspace, WorkspaceCareEvent, WorkspaceCareTask
 from .rotation import RotationPlanting, SOIL_GROWING_AREA_KINDS, evaluate_rotation
-from .schemas import CareNoteDraftRequest, PlantHealthAssessmentRequest, RotationGuidanceRequest, WorkspaceImport
+from .schemas import CareNoteDraftRequest, PlantHealthAssessmentRequest, PlantKnowledgeAnswer, PlantKnowledgeQuestion, RotationGuidanceRequest, WorkspaceImport
 
 
 def import_fingerprint(workspace: WorkspaceImport) -> str:
@@ -206,6 +208,127 @@ def plant_health_assessment(
             "plantGroups": [planting.common_name for planting in garden.plantings],
         },
     ).model_dump(by_alias=True)
+
+
+def plant_knowledge_answer(
+    session: Session,
+    workspace_id: str,
+    payload: PlantKnowledgeQuestion,
+    embedding_client: EmbeddingClient,
+    answerer: PlantKnowledgeAnswerer,
+) -> dict:
+    workspace = load_workspace(session, workspace_id)
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    garden = None
+    if payload.garden_id:
+        garden = next((candidate for candidate in workspace.gardens if candidate.external_id == payload.garden_id), None)
+        if garden is None:
+            raise HTTPException(status_code=422, detail="gardenId must reference a garden in this workspace")
+
+    seed_knowledge_cards(session)
+    chunks = list(
+        session.scalars(
+            select(KnowledgeChunk)
+            .options(selectinload(KnowledgeChunk.source))
+            .order_by(KnowledgeChunk.position)
+        )
+    )
+    missing_embeddings = [chunk for chunk in chunks if chunk.embedding_model != embedding_client.model or chunk.embedding is None]
+    if missing_embeddings:
+        for chunk, embedding in zip(missing_embeddings, embedding_client.embed([chunk.content for chunk in missing_embeddings]), strict=True):
+            chunk.embedding = embedding
+            chunk.embedding_model = embedding_client.model
+        session.commit()
+
+    query_embedding = embedding_client.embed([payload.question])[0]
+    evidence = retrieve_knowledge(session, chunks, query_embedding)
+    if not evidence or cosine_similarity(query_embedding, evidence[0].embedding) < 0.2:
+        return PlantKnowledgeAnswer(
+            answer="The current Plant Knowledge library does not contain enough evidence for that question. Add the plant name, symptom, timing, and recent care details, or consult a local plant diagnostic service.",
+            confidence="low",
+            followUpQuestions=["Which plant is affected?", "What changed first, and when did it begin?"],
+            citations=[],
+        ).model_dump(by_alias=True)
+
+    garden_context = None if garden is None else {
+        "name": garden.name,
+        "plantingAreas": [area.name for area in garden.growing_areas],
+        "plantGroups": [planting.common_name for planting in garden.plantings],
+    }
+    draft = answerer.answer(
+        payload.question,
+        garden_context,
+        [{"title": chunk.source.title, "publisher": chunk.source.publisher, "content": chunk.content} for chunk in evidence],
+    )
+    citations = []
+    seen_source_keys: set[str] = set()
+    for chunk in evidence:
+        if chunk.source.source_key in seen_source_keys:
+            continue
+        seen_source_keys.add(chunk.source.source_key)
+        citations.append({
+            "sourceKey": chunk.source.source_key,
+            "title": chunk.source.title,
+            "publisher": chunk.source.publisher,
+            "sourceUrl": chunk.source.source_url,
+            "reviewedOn": chunk.source.reviewed_on,
+            "excerpt": chunk.content,
+        })
+    return PlantKnowledgeAnswer(
+        **draft.model_dump(by_alias=True),
+        citations=citations,
+    ).model_dump(by_alias=True)
+
+
+def seed_knowledge_cards(session: Session) -> None:
+    existing_keys = set(session.scalars(select(KnowledgeSource.source_key)))
+    for position, card in enumerate(SEED_KNOWLEDGE_CARDS):
+        if card.source_key in existing_keys:
+            continue
+        source = KnowledgeSource(
+            source_key=card.source_key,
+            title=card.title,
+            publisher=card.publisher,
+            source_url=card.source_url,
+            reviewed_on=card.reviewed_on,
+        )
+        source.chunks.append(
+            KnowledgeChunk(
+                external_id=f"{card.source_key}-summary",
+                position=position,
+                content=card.content,
+                tags=card.tags,
+            )
+        )
+        session.add(source)
+    session.commit()
+
+
+def retrieve_knowledge(session: Session, chunks: list[KnowledgeChunk], query_embedding: list[float]) -> list[KnowledgeChunk]:
+    if session.bind and session.bind.dialect.name == "postgresql":
+        return list(
+            session.scalars(
+                select(KnowledgeChunk)
+                .where(KnowledgeChunk.embedding.is_not(None))
+                .options(selectinload(KnowledgeChunk.source))
+                .order_by(KnowledgeChunk.embedding.cosine_distance(query_embedding))
+                .limit(4)
+            )
+        )
+    return sorted(
+        [chunk for chunk in chunks if chunk.embedding is not None],
+        key=lambda chunk: cosine_similarity(query_embedding, chunk.embedding),
+        reverse=True,
+    )[:4]
+
+
+def cosine_similarity(left: list[float], right) -> float:
+    right_values = list(right)
+    denominator = sqrt(sum(value * value for value in left)) * sqrt(sum(value * value for value in right_values))
+    if not denominator:
+        return 0
+    return sum(left_value * right_value for left_value, right_value in zip(left, right_values, strict=True)) / denominator
 
 
 def resolve_care_note_target(garden: Garden, target_scope: str | None, target_name: str | None) -> dict | None:

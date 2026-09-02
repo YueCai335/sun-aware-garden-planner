@@ -1,0 +1,21 @@
+[
+  {
+    "name": "tomato-white-coating",
+    "question": "My tomato has a white coating on its leaves.",
+    "gardenId": "garden-1",
+    "expectedSourceKey": "umn-tomato-home-gardens",
+    "expectsEvidence": true
+  },
+  {
+    "name": "zucchini-white-powder",
+    "question": "我的西葫芦叶子上有很多白色的粉，是病了吗？",
+    "gardenId": "garden-1",
+    "expectedSourceKey": "umn-summer-squash-zucchini",
+    "expectsEvidence": true
+  },
+  {
+    "name": "unsupported-sprinkler-repair",
+    "question": "How do I repair a broken lawn sprinkler?",
+    "expectsEvidence": false
+  }
+]

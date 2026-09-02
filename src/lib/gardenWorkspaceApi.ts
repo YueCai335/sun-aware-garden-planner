@@ -42,6 +42,20 @@ export type AiCareNoteDraft = {
   reviewNotes: string[];
 };
 
+export type PlantKnowledgeAnswer = {
+  answer: string;
+  confidence: "low" | "medium" | "high";
+  followUpQuestions: string[];
+  citations: Array<{
+    sourceKey: string;
+    title: string;
+    publisher: string;
+    sourceUrl: string;
+    reviewedOn: string;
+    excerpt: string;
+  }>;
+};
+
 async function request(path: string, options?: RequestInit): Promise<ServerWorkspace> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,
@@ -143,4 +157,19 @@ export async function createPlantHealthAssessment(
     throw new Error(detail.detail ?? "The AI service could not create a plant-health assessment.");
   }
   return response.json() as Promise<HealthAssessment>;
+}
+
+export async function askPlantKnowledge(
+  workspaceId: string,
+  input: { question: string; gardenId?: string },
+): Promise<PlantKnowledgeAnswer> {
+  const response = await fetch(
+    apiUrl(`/workspaces/${encodeURIComponent(workspaceId)}/plant-knowledge/answer`),
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
+  );
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.detail ?? "The garden server could not answer this question.");
+  }
+  return response.json() as Promise<PlantKnowledgeAnswer>;
 }

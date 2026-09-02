@@ -197,6 +197,49 @@ describe("GardenWorkspace", () => {
     );
   });
 
+  it("answers a Plant Knowledge question with visible source citations", async () => {
+    const user = userEvent.setup();
+    const workspace = createDemoGardenWorkspace();
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/plant-knowledge/answer")) {
+        return {
+          ok: true,
+          json: async () => ({
+            answer: "Observe the coating and improve airflow while you gather more detail.",
+            confidence: "low",
+            followUpQuestions: ["Does the coating wipe away?"],
+            citations: [{
+              sourceKey: "umn-preventing-plant-diseases",
+              title: "Preventing plant diseases in the garden",
+              publisher: "University of Minnesota Extension",
+              sourceUrl: "https://extension.umn.edu/example",
+              reviewedOn: "2026-09-01",
+              excerpt: "Garden disease prevention includes sanitation and airflow.",
+            }],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => init?.method ? JSON.parse(String(init.body)) : { workspaceId: "server-workspace", ...workspace },
+      };
+    });
+    vi.stubGlobal("fetch", fetch);
+    window.localStorage.setItem(SERVER_WORKSPACE_STORAGE_KEY, "server-workspace");
+
+    render(<GardenWorkspace />);
+    await user.click(await screen.findByRole("button", { name: "Plant knowledge" }));
+    await user.type(screen.getByLabelText("Question"), "My tomato has a white coating.");
+    await user.click(screen.getByRole("button", { name: "Ask Plant Knowledge" }));
+
+    expect(await screen.findByRole("heading", { name: "Answer" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Preventing plant diseases in the garden" })).toHaveAttribute("href", "https://extension.umn.edu/example");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/plant-knowledge\/answer$/),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("separates all-garden care from care for one named location", async () => {
     const user = userEvent.setup();
     await loadDemo(user);

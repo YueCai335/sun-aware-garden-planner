@@ -1003,6 +1003,60 @@ select {
   color: #657268;
 }
 
+.knowledge-answer {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+  border: 1px solid #cfd7ce;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.knowledge-answer h3,
+.knowledge-answer h4,
+.knowledge-answer p {
+  margin: 0;
+}
+
+.knowledge-answer h3,
+.knowledge-answer h4 {
+  color: #183a2a;
+}
+
+.knowledge-answer > ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.knowledge-citations {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.knowledge-citations li {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid #d7ddd6;
+  padding-top: 10px;
+}
+
+.knowledge-citations a {
+  color: #286143;
+  font-weight: 700;
+}
+
+.knowledge-citations span,
+.knowledge-citations p {
+  color: #657268;
+  font-size: 14px;
+}
+
 .care-event-list {
   display: grid;
   gap: 10px;

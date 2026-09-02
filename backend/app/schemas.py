@@ -281,5 +281,29 @@ class PlantHealthAssessmentResponse(HealthAssessment):
     pass
 
 
+class PlantKnowledgeQuestion(ApiModel):
+    question: str = Field(min_length=3, max_length=2000)
+    garden_id: str | None = Field(default=None, serialization_alias="gardenId", validation_alias="gardenId")
+
+
+class KnowledgeCitation(ApiModel):
+    source_key: str = Field(serialization_alias="sourceKey", validation_alias="sourceKey")
+    title: str
+    publisher: str
+    source_url: str = Field(serialization_alias="sourceUrl", validation_alias="sourceUrl")
+    reviewed_on: Date = Field(serialization_alias="reviewedOn", validation_alias="reviewedOn")
+    excerpt: str
+
+
+class PlantKnowledgeDraft(ApiModel):
+    answer: str = Field(min_length=1, max_length=3000)
+    confidence: HealthSeverity
+    follow_up_questions: list[str] = Field(max_length=3, serialization_alias="followUpQuestions", validation_alias="followUpQuestions")
+
+
+class PlantKnowledgeAnswer(PlantKnowledgeDraft):
+    citations: list[KnowledgeCitation] = Field(max_length=4)
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok"]

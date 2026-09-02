@@ -4,7 +4,7 @@ from datetime import date
 from typing import Protocol
 from urllib.request import Request, urlopen
 
-from .schemas import CareNoteExtraction, HealthAssessment, HealthSeverity
+from .schemas import CareNoteExtraction, HealthAssessment, HealthSeverity, PlantKnowledgeAnswer, PlantKnowledgeDraft
 
 
 class CareNoteExtractor(Protocol):
@@ -19,6 +19,21 @@ class PlantHealthAssessor(Protocol):
         photo_count: int,
         garden_context: dict[str, object],
     ) -> HealthAssessment: ...
+
+
+class EmbeddingClient(Protocol):
+    model: str
+
+    def embed(self, inputs: list[str]) -> list[list[float]]: ...
+
+
+class PlantKnowledgeAnswerer(Protocol):
+    def answer(
+        self,
+        question: str,
+        garden_context: dict[str, object] | None,
+        evidence: list[dict[str, str]],
+    ) -> PlantKnowledgeDraft: ...
 
 
 class CareNoteProviderError(RuntimeError):
@@ -265,4 +280,95 @@ def plant_health_instructions() -> str:
         "Use low confidence when symptoms are incomplete. Give low-risk observation, hygiene, isolation, or monitoring steps only. "
         "Do not recommend pesticides, fungicides, brands, doses, or claim certainty. Photos are attached evidence but this text-only model cannot inspect them; "
         "ask for close-up photos when relevant. Keep each list concise."
+    )
+
+
+class OllamaEmbeddingClient:
+    def __init__(self, base_url: str, model: str):
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+
+    def embed(self, inputs: list[str]) -> list[list[float]]:
+        try:
+            request = Request(
+                f"{self.base_url}/api/embed",
+                data=json.dumps({"model": self.model, "input": inputs}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=90) as response:
+                embeddings = json.loads(response.read())["embeddings"]
+            if not embeddings or any(len(vector) != 768 for vector in embeddings):
+                raise ValueError("The embedding model returned an unexpected vector size.")
+            return embeddings
+        except Exception as error:
+            raise CareNoteProviderError(
+                "Local Ollama could not create search embeddings. Start Ollama and download embeddinggemma."
+            ) from error
+
+
+class OllamaPlantKnowledgeAnswerer:
+    def __init__(self, base_url: str, model: str):
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+
+    def answer(
+        self,
+        question: str,
+        garden_context: dict[str, object] | None,
+        evidence: list[dict[str, str]],
+    ) -> PlantKnowledgeDraft:
+        try:
+            request = Request(
+                f"{self.base_url}/api/chat",
+                data=json.dumps(
+                    {
+                        "model": self.model,
+                        "stream": False,
+                        "think": False,
+                        "format": PlantKnowledgeDraft.model_json_schema(by_alias=True),
+                        "options": {"temperature": 0},
+                        "messages": [
+                            {"role": "system", "content": plant_knowledge_instructions()},
+                            {
+                                "role": "user",
+                                "content": json.dumps(
+                                    {"question": question, "garden": garden_context, "evidence": evidence},
+                                    ensure_ascii=False,
+                                ),
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urlopen(request, timeout=90) as response:
+                content = json.loads(response.read())["message"]["content"]
+            return PlantKnowledgeDraft.model_validate_json(content)
+        except Exception as error:
+            raise CareNoteProviderError("Local Ollama could not create a Plant Knowledge answer.") from error
+
+
+def configured_embedding_client() -> EmbeddingClient:
+    return OllamaEmbeddingClient(
+        os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        os.getenv("OLLAMA_EMBEDDING_MODEL", "embeddinggemma"),
+    )
+
+
+def configured_plant_knowledge_answerer() -> PlantKnowledgeAnswerer:
+    return OllamaPlantKnowledgeAnswerer(
+        os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        os.getenv("OLLAMA_MODEL", "qwen3:4b"),
+    )
+
+
+def plant_knowledge_instructions() -> str:
+    return (
+        "Answer in the same language as the gardener's question, using only the supplied evidence. "
+        "State uncertainty when the evidence is incomplete. Give low-risk observation, hygiene, monitoring, or care suggestions. "
+        "Do not diagnose with certainty and do not recommend pesticides, fungicides, brands, or doses. "
+        "Return a concise answer and up to three follow-up questions. Do not create citations; the application attaches verified citations."
     )

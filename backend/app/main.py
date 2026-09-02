@@ -7,10 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from .ai import CareNoteExtractor, CareNoteProviderError, PlantHealthAssessor, configured_care_note_extractor, configured_plant_health_assessor
+from .ai import CareNoteExtractor, CareNoteProviderError, EmbeddingClient, PlantHealthAssessor, PlantKnowledgeAnswerer, configured_care_note_extractor, configured_embedding_client, configured_plant_health_assessor, configured_plant_knowledge_answerer
 from .database import get_session
-from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, PlantHealthAssessmentRequest, PlantHealthAssessmentResponse, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
-from .service import care_note_draft, import_workspace, load_workspace, plant_health_assessment, rotation_guidance, update_workspace, workspace_response
+from .schemas import CareNoteDraftRequest, CareNoteDraftResponse, HealthResponse, PlantHealthAssessmentRequest, PlantHealthAssessmentResponse, PlantKnowledgeAnswer, PlantKnowledgeQuestion, RotationGuidanceRequest, RotationGuidanceResponse, WorkspaceImport
+from .service import care_note_draft, import_workspace, load_workspace, plant_health_assessment, plant_knowledge_answer, rotation_guidance, update_workspace, workspace_response
 
 app = FastAPI(title="Sun-Aware Garden Planner API", version="0.1.0")
 uploads_dir = Path(os.getenv("UPLOADS_DIR", "/tmp/sun-aware-garden-planner-uploads"))
@@ -39,6 +39,20 @@ def get_care_note_extractor() -> CareNoteExtractor:
 def get_plant_health_assessor() -> PlantHealthAssessor:
     try:
         return configured_plant_health_assessor()
+    except CareNoteProviderError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+def get_embedding_client() -> EmbeddingClient:
+    try:
+        return configured_embedding_client()
+    except CareNoteProviderError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+
+def get_plant_knowledge_answerer() -> PlantKnowledgeAnswerer:
+    try:
+        return configured_plant_knowledge_answerer()
     except CareNoteProviderError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
@@ -131,6 +145,21 @@ def create_plant_health_assessment(
     assessor: PlantHealthAssessor = Depends(get_plant_health_assessor),
 ):
     return plant_health_assessment(session, workspace_id, garden_id, payload, assessor)
+
+
+@app.post(
+    "/workspaces/{workspace_id}/plant-knowledge/answer",
+    response_model=PlantKnowledgeAnswer,
+    tags=["AI"],
+)
+def create_plant_knowledge_answer(
+    workspace_id: str,
+    payload: PlantKnowledgeQuestion,
+    session: Session = Depends(get_session),
+    embedding_client: EmbeddingClient = Depends(get_embedding_client),
+    answerer: PlantKnowledgeAnswerer = Depends(get_plant_knowledge_answerer),
+):
+    return plant_knowledge_answer(session, workspace_id, payload, embedding_client, answerer)
 
 
 @app.put("/workspaces/{workspace_id}", tags=["workspaces"])

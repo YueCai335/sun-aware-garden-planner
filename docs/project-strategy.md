@@ -108,7 +108,7 @@ understanding, and heatmap rendering belong to this future module.
 | Maps and place search | Mapbox GL JS, Mapbox Search JS | Existing address-map prototype and future map-backed garden layout |
 | Vector search | pgvector | Retrieval over plant, climate, and horticultural knowledge for grounded AI responses |
 | Cache and background work | Redis, added when a measured workflow requires it | Cached retrieval, scheduled task generation, and long-running AI job status |
-| AI application layer | OpenAI API, RAG, structured outputs, tool calling | Garden-log extraction, care planning, rotation assistance, and grounded questions |
+| AI application layer | Ollama, OpenAI API, RAG, structured outputs, tool calling | Local garden-log extraction and grounded plant questions; OpenAI remains an optional future provider |
 | AI quality | Evaluation datasets, citations, fallbacks, guardrails | Repeatable checks for extracted records, grounded answers, constraint compliance, and failure behavior |
 | Image storage | Amazon S3 | Garden photos and future authorized map or calibration assets |
 | Cloud backend | AWS ECS Fargate, RDS, CloudWatch | Container hosting, managed PostgreSQL, logs, metrics, and production operations |
@@ -129,7 +129,7 @@ understanding, and heatmap rendering belong to this future module.
   implemented.
 - Introduce PostgreSQL with the first persisted garden workflow.
 - Introduce PostGIS with location-aware persistence or regional search.
-- Introduce pgvector with the RAG phase and evaluate retrieval quality.
+- pgvector powers the curated Plant Knowledge retrieval path; extend the fixed evaluation dataset as the source corpus grows.
 - Keep Redis conditional until caching, scheduled processing, or background
   task measurements justify it.
 - Introduce Terraform with AWS deployment so the infrastructure it manages is

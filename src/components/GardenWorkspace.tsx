@@ -7,6 +7,7 @@ import { GrowingAreaLayoutEditor } from "@/components/GrowingAreaLayoutEditor";
 import { SeasonPlanner } from "@/components/SeasonPlanner";
 import { AiGardenNote } from "@/components/AiGardenNote";
 import { PlantHealth } from "@/components/PlantHealth";
+import { PlantKnowledge } from "@/components/PlantKnowledge";
 import {
   addDays,
   careTaskStatus,
@@ -59,6 +60,7 @@ export function GardenWorkspace() {
   const [isCareHub, setIsCareHub] = useState(false);
   const [isAiGardenNote, setIsAiGardenNote] = useState(false);
   const [isPlantHealth, setIsPlantHealth] = useState(false);
+  const [isPlantKnowledge, setIsPlantKnowledge] = useState(false);
   const [isSeasonPlanner, setIsSeasonPlanner] = useState(false);
   const [careView, setCareView] = useState<"tasks" | "history">("tasks");
   const [isGardenSetup, setIsGardenSetup] = useState(false);
@@ -284,6 +286,7 @@ export function GardenWorkspace() {
     setIsCareHub(false);
     setIsAiGardenNote(false);
     setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setRenameGardenName(nextGarden?.name ?? garden?.name ?? "");
@@ -301,6 +304,7 @@ export function GardenWorkspace() {
     setIsCareHub(false);
     setIsAiGardenNote(false);
     setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setCareView("tasks");
@@ -313,6 +317,7 @@ export function GardenWorkspace() {
     setIsCareHub(true);
     setIsAiGardenNote(false);
     setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     setIsGardenSetup(false);
     setIsSeasonPlanner(false);
     clearTransientState();
@@ -324,6 +329,7 @@ export function GardenWorkspace() {
     setIsCareHub(false);
     setIsAiGardenNote(false);
     setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     setIsSeasonPlanner(false);
     setIsGardenSetup(false);
     setCareGardenId(undefined);
@@ -612,6 +618,8 @@ export function GardenWorkspace() {
     setIsCareLog(false);
     setIsCareHub(false);
     setIsAiGardenNote(false);
+    setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     setIsGardenSetup(false);
     setIsSeasonPlanner(true);
     clearTransientState();
@@ -625,6 +633,7 @@ export function GardenWorkspace() {
     setIsSeasonPlanner(false);
     setIsAiGardenNote(true);
     setIsPlantHealth(false);
+    setIsPlantKnowledge(false);
     clearTransientState();
   };
 
@@ -634,6 +643,19 @@ export function GardenWorkspace() {
     setIsCareHub(false);
     setIsAiGardenNote(false);
     setIsPlantHealth(true);
+    setIsPlantKnowledge(false);
+    setIsGardenSetup(false);
+    setIsSeasonPlanner(false);
+    clearTransientState();
+  };
+
+  const openPlantKnowledge = () => {
+    setIsManagement(false);
+    setIsCareLog(false);
+    setIsCareHub(false);
+    setIsAiGardenNote(false);
+    setIsPlantHealth(false);
+    setIsPlantKnowledge(true);
     setIsGardenSetup(false);
     setIsSeasonPlanner(false);
     clearTransientState();
@@ -1134,7 +1156,7 @@ export function GardenWorkspace() {
           <h1>{garden.name}</h1>
         </div>
         <div className="header-actions">
-          {isManagement || isCareLog || isCareHub || isSeasonPlanner || isAiGardenNote || isPlantHealth ? (
+          {isManagement || isCareLog || isCareHub || isSeasonPlanner || isAiGardenNote || isPlantHealth || isPlantKnowledge ? (
             <button
               className="secondary-button"
               onClick={returnToDashboard}
@@ -1176,6 +1198,13 @@ export function GardenWorkspace() {
           onSave={saveHealthRecord}
           workspaceId={serverWorkspaceId}
         />
+      ) : isPlantKnowledge ? (
+        <PlantKnowledge
+          gardens={workspace.gardens}
+          initialGardenId={garden.id}
+          isServerBacked={storageSource === "server"}
+          workspaceId={serverWorkspaceId}
+        />
       ) : isCareHub ? (
         <CareHub gardens={workspace.gardens} onOpenCare={openCareLog} workspace={workspace} />
       ) : !isManagement && !isCareLog ? (
@@ -1185,6 +1214,7 @@ export function GardenWorkspace() {
           onCare={openCareHub}
           onAiGardenNote={openAiGardenNote}
           onPlantHealth={openPlantHealth}
+          onPlantKnowledge={openPlantKnowledge}
           onPlanSeason={openSeasonPlanner}
           onAddGarden={openGardenSetup}
           onManage={openManagement}
@@ -1406,6 +1436,7 @@ function Home({
   onCare,
   onAiGardenNote,
   onPlantHealth,
+  onPlantKnowledge,
   onPlanSeason,
   onManage,
   onSelectGarden,
@@ -1417,6 +1448,7 @@ function Home({
   onCare: () => void;
   onAiGardenNote: () => void;
   onPlantHealth: () => void;
+  onPlantKnowledge: () => void;
   onPlanSeason: () => void;
   onManage: (gardenId?: string) => void;
   onSelectGarden: (gardenId: string) => void;
@@ -1481,6 +1513,9 @@ function Home({
         </button>
         <button className="secondary-button" onClick={onPlantHealth} type="button">
           Plant health
+        </button>
+        <button className="secondary-button" onClick={onPlantKnowledge} type="button">
+          Plant knowledge
         </button>
       </section>
       <Status message={message} />

@@ -1,14 +1,15 @@
 import json
 from copy import deepcopy
 from datetime import date
+from pathlib import Path
 
 from sqlalchemy import func, select
 
 from app import database
 from app.ai import OllamaCareNoteExtractor, complete_known_care_note_fields, configured_care_note_extractor
-from app.main import app, get_care_note_extractor, get_plant_health_assessor, uploads_dir
+from app.main import app, get_care_note_extractor, get_embedding_client, get_plant_health_assessor, get_plant_knowledge_answerer, uploads_dir
 from app.models import Garden, Workspace
-from app.schemas import CareNoteExtraction, HealthAssessment
+from app.schemas import CareNoteExtraction, HealthAssessment, PlantKnowledgeDraft
 
 
 def workspace_payload():
@@ -271,6 +272,43 @@ class FakePlantHealthAssessor:
         return self.assessment
 
 
+class FakeEmbeddingClient:
+    model = "embeddinggemma"
+
+    def embed(self, inputs: list[str]) -> list[list[float]]:
+        return [embedding_for(input) for input in inputs]
+
+
+class FakePlantKnowledgeAnswerer:
+    def __init__(self):
+        self.evidence: list[dict[str, str]] | None = None
+
+    def answer(self, question: str, garden_context: dict[str, object] | None, evidence: list[dict[str, str]]) -> PlantKnowledgeDraft:
+        self.evidence = evidence
+        return PlantKnowledgeDraft(
+            answer="Observe the affected leaves and improve airflow while you gather more detail.",
+            confidence="low",
+            followUpQuestions=["Does the coating wipe away?"],
+        )
+
+
+def embedding_for(text: str) -> list[float]:
+    normalized = text.casefold()
+    if "sprinkler" in normalized:
+        return [0.0] * 768
+    if any(term in normalized for term in ("tomato", "番茄", "white coating")):
+        return [1.0, 0.0, 0.0, *([0.0] * 765)]
+    if any(term in normalized for term in ("squash", "zucchini", "西葫芦", "南瓜", "cucurbit")):
+        return [0.0, 0.0, 1.0, *([0.0] * 765)]
+    return [0.0, 1.0, 0.0, *([0.0] * 765)]
+
+
+EVALUATION_CASES = {
+    case["name"]: case
+    for case in json.loads((Path(__file__).parent / "fixtures" / "plant_knowledge_evaluations.json").read_text())
+}
+
+
 def test_ai_care_note_returns_a_reviewable_draft_for_a_chinese_note(client):
     assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
     extractor = FakeCareNoteExtractor(
@@ -440,6 +478,62 @@ def test_plant_health_record_round_trips_with_its_target_and_evidence(client):
 
     assert response.status_code == 201
     assert response.json() == payload
+
+
+def test_plant_knowledge_returns_answer_with_retrieved_source_cards(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    case = EVALUATION_CASES["tomato-white-coating"]
+    answerer = FakePlantKnowledgeAnswerer()
+    app.dependency_overrides[get_embedding_client] = lambda: FakeEmbeddingClient()
+    app.dependency_overrides[get_plant_knowledge_answerer] = lambda: answerer
+
+    response = client.post(
+        "/workspaces/local-workspace-1/plant-knowledge/answer",
+        json={"question": case["question"], "gardenId": case["gardenId"]},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["answer"].startswith("Observe the affected leaves")
+    assert response.json()["citations"][0]["sourceKey"] == case["expectedSourceKey"]
+    assert answerer.evidence is not None
+    assert answerer.evidence[0]["title"] == "Growing tomatoes in home gardens"
+
+
+def test_plant_knowledge_retrieves_cucurbit_evidence_for_a_chinese_question(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    case = EVALUATION_CASES["zucchini-white-powder"]
+    answerer = FakePlantKnowledgeAnswerer()
+    app.dependency_overrides[get_embedding_client] = lambda: FakeEmbeddingClient()
+    app.dependency_overrides[get_plant_knowledge_answerer] = lambda: answerer
+
+    response = client.post(
+        "/workspaces/local-workspace-1/plant-knowledge/answer",
+        json={"question": case["question"], "gardenId": case["gardenId"]},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["citations"][0]["sourceKey"] == case["expectedSourceKey"]
+    assert answerer.evidence is not None
+    assert answerer.evidence[0]["title"] == "Growing summer squash and zucchini in home gardens"
+
+
+def test_plant_knowledge_requests_more_detail_when_retrieval_is_weak(client):
+    assert client.put("/workspaces/local-workspace-1/import", json=workspace_payload()).status_code == 201
+    case = EVALUATION_CASES["unsupported-sprinkler-repair"]
+    app.dependency_overrides[get_embedding_client] = lambda: FakeEmbeddingClient()
+    app.dependency_overrides[get_plant_knowledge_answerer] = lambda: FakePlantKnowledgeAnswerer()
+
+    response = client.post(
+        "/workspaces/local-workspace-1/plant-knowledge/answer",
+        json={"question": case["question"]},
+    )
+
+    app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert response.json()["confidence"] == "low"
+    assert response.json()["citations"] == []
 
 
 def test_ollama_care_note_extractor_requests_schema_validated_json(monkeypatch):

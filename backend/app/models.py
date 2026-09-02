@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, Stri
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
+from pgvector.sqlalchemy import Vector
 
 from .database import Base
 
@@ -158,6 +159,35 @@ class HealthRecord(CareTargetFields, Base):
     photo_paths: Mapped[list[str]] = mapped_column(JsonValue)
     assessment: Mapped[dict | None] = mapped_column(JsonValue, nullable=True)
     garden: Mapped[Garden] = relationship(back_populates="health_records")
+
+
+class KnowledgeSource(Base):
+    __tablename__ = "knowledge_sources"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    source_key: Mapped[str] = mapped_column(String(120), unique=True)
+    title: Mapped[str] = mapped_column(String(300))
+    publisher: Mapped[str] = mapped_column(String(200))
+    source_url: Mapped[str] = mapped_column(String(2000))
+    reviewed_on: Mapped[date] = mapped_column(Date)
+    chunks: Mapped[list["KnowledgeChunk"]] = relationship(
+        back_populates="source", cascade="all, delete-orphan", order_by="KnowledgeChunk.position"
+    )
+
+
+class KnowledgeChunk(Base):
+    __tablename__ = "knowledge_chunks"
+    __table_args__ = (UniqueConstraint("source_id", "external_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    source_id: Mapped[str] = mapped_column(ForeignKey("knowledge_sources.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(120))
+    position: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    tags: Mapped[list[str]] = mapped_column(JsonValue)
+    embedding_model: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), nullable=True)
+    source: Mapped[KnowledgeSource] = relationship(back_populates="chunks")
 
 
 class WorkspaceCareEvent(Base):
