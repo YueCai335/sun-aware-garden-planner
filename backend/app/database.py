@@ -10,10 +10,15 @@ class Base(DeclarativeBase):
 
 
 def database_url() -> str:
-    return os.getenv(
+    url = os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg://garden@localhost:5433/garden_planner",
     )
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    return url
 
 
 def make_engine(url: str):

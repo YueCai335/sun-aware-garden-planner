@@ -29,6 +29,14 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
+def require_local_feature(feature: str) -> None:
+    if os.getenv("PORTFOLIO_DEMO_MODE", "").lower() in {"1", "true", "yes"}:
+        raise HTTPException(
+            status_code=503,
+            detail=f"{feature} is available in the local app for this portfolio demo.",
+        )
+
+
 def get_care_note_extractor() -> CareNoteExtractor:
     try:
         return configured_care_note_extractor()
@@ -102,6 +110,7 @@ def create_care_note_draft(
     session: Session = Depends(get_session),
     extractor: CareNoteExtractor = Depends(get_care_note_extractor),
 ):
+    require_local_feature("AI assistance")
     return care_note_draft(session, workspace_id, garden_id, payload, extractor)
 
 
@@ -115,6 +124,7 @@ async def upload_plant_health_photo(
     photo: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
+    require_local_feature("Photo upload")
     workspace = load_workspace(session, workspace_id)
     if workspace is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
@@ -144,6 +154,7 @@ def create_plant_health_assessment(
     session: Session = Depends(get_session),
     assessor: PlantHealthAssessor = Depends(get_plant_health_assessor),
 ):
+    require_local_feature("AI assistance")
     return plant_health_assessment(session, workspace_id, garden_id, payload, assessor)
 
 
@@ -159,6 +170,7 @@ def create_plant_knowledge_answer(
     embedding_client: EmbeddingClient = Depends(get_embedding_client),
     answerer: PlantKnowledgeAnswerer = Depends(get_plant_knowledge_answerer),
 ):
+    require_local_feature("AI assistance")
     return plant_knowledge_answer(session, workspace_id, payload, embedding_client, answerer)
 
 
