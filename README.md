@@ -1,163 +1,136 @@
 # Sun-Aware Garden Planner
 
-An AI-assisted garden operations and planning app for tracking gardens across
-seasons, organizing care, and creating reviewable planning guidance.
+A full-stack garden operations and seasonal-planning application. It helps a
+gardener organize multiple locations, visualize planting areas, record care,
+plan the next season, and ask source-grounded plant questions.
 
-## Core Idea
+## What It Demonstrates
 
-Garden information is often spread across memory, paper notes, photos, plant
-labels, and calendar reminders. This makes it hard to remember what happened,
-plan care, or rotate crops across growing areas and seasons.
+- **Garden operations:** multiple gardens, raised beds, in-ground areas, and
+  container groups with measured planting layouts.
+- **Current records:** plants, care history, recurring care tasks, and
+  reviewable plant-health records.
+- **Seasonal planning:** crop-family rotation guidance by growing area and a
+  separate next-season plan with companion-planting notes.
+- **Applied AI:** Chinese and English care-note extraction, local RAG-backed
+  Plant Knowledge answers, visible citations, and user review before records
+  are saved.
+- **Full-stack delivery:** Next.js, FastAPI, PostgreSQL, Alembic, pgvector,
+  Docker Compose, GitHub Actions, Vitest, and pytest.
 
-This app helps users answer:
+## Five-Minute Demo
 
-- What did I plant, water, fertilize, or harvest in each growing area?
-- Which care tasks are due soon?
-- Which crops grew in this area last season?
-- What can I plant next while respecting rotation constraints?
+1. Start the API and database with `docker compose up --build`.
+2. In another terminal, start the web app with `npm run dev`.
+3. Open `http://localhost:3000` and select **Load demo garden**.
+4. Double-click **Demo Garden** to inspect its measured growing areas and
+   plant layout.
+5. Return to the dashboard and open **Plan next season**. Review crop-family
+   guidance, then add a crop to a growing area's next-season plan.
+6. Open **Care** to create a task or record a completed care event.
+7. Open **Plant knowledge** to ask a Chinese or English question and inspect
+   the cited source cards.
 
-## Product Goal
+The demo uses generic data and can be loaded repeatedly. It replaces the
+gardens saved in the current browser workspace.
 
-Input:
+## Architecture
 
-- Gardens and named growing areas.
-- Plants, crop families, planting dates, and seasonal history.
-- Watering, fertilizer, transplanting, harvest, pest, and observation records.
-- Planned care tasks and free-text garden notes.
+```text
+Next.js + React + TypeScript
+        |
+        | typed workspace requests
+        v
+FastAPI + Pydantic
+        |
+        v
+PostgreSQL + SQLAlchemy + Alembic + pgvector
+        |
+        +-- deterministic crop-rotation service
+        +-- local AI extraction and plant-knowledge retrieval
+```
 
-Output:
+The frontend renders measured growing-area layouts with React-Konva. Garden
+data is first created in the browser, then explicitly imported into PostgreSQL.
+After import, PostgreSQL is the workspace's write source. The full data model
+and trade-offs are documented in [Technical Architecture](docs/technical-architecture.md)
+and the [Architecture Decision Records](docs/decisions/README.md).
 
-- Searchable garden history and upcoming care tasks.
-- Crop-rotation warnings and planning suggestions.
-- Reviewable structured records extracted from a garden note.
-- RAG-grounded plant and care guidance with citations.
+## Local Setup
 
-## MVP Scope
+### Requirements
 
-The first version focuses on a reliable seasonal workflow:
+- Node.js 20 or later
+- Docker Desktop
+- Optional for local AI: [Ollama](https://ollama.com/)
 
-1. Create a garden and named growing areas.
-2. Add plants and record garden activity.
-3. Create and complete future care tasks.
-4. Preserve the browser-saved garden through refreshes.
-5. Add crop rotation and AI-assisted record extraction after the operations
-   workflow is stable.
+### Start the application
 
-## Why This Is A Strong CS Project
+```bash
+docker compose up --build
+```
 
-This project combines:
-
-- Full-stack product engineering.
-- Temporal product and workflow design.
-- Relational data modeling.
-- API validation and authorization.
-- Deterministic crop-rotation rules.
-- RAG-grounded recommendations.
-- Agentic planning workflow.
-- Structured garden memory.
-- Explainable AI output.
-
-## Target Production Stack
-
-- Frontend: Next.js, React, TypeScript, Tailwind CSS, shadcn/ui.
-- Backend: Python, FastAPI, Pydantic, REST, OpenAPI.
-- Data: PostgreSQL, PostGIS, pgvector, SQLAlchemy, Alembic.
-- AI: OpenAI API, RAG, structured outputs, tool calling, evaluations.
-- Cloud: AWS ECS Fargate, RDS, S3, CloudWatch, plus Vercel for the web
-  application.
-- Delivery: Docker, Docker Compose, GitHub Actions, Terraform.
-- Quality: Vitest, React Testing Library, Playwright, pytest, structured
-  logging, OpenTelemetry, and request tracing.
-
-The canonical employment positioning, technology-to-feature mapping, and
-adoption rules are maintained in [Project Strategy](docs/project-strategy.md).
-
-## Project Documents
-
-- [Product Brief](docs/product-brief.md)
-- [MVP Roadmap](docs/mvp-roadmap.md)
-- [Technical Architecture](docs/technical-architecture.md)
-- [Project Strategy](docs/project-strategy.md)
-- [Architecture Decision Records](docs/decisions/README.md)
-- [Sun And Shadow Algorithm](docs/sun-shadow-algorithm.md)
-- [AI And RAG Design](docs/ai-rag-agent-design.md)
-- [Resume Positioning](docs/resume-positioning.md)
-
-## Local App Setup
-
-This project currently starts with a small Next.js + TypeScript frontend. The
-active implementation target is the Garden Operations MVP.
-
-Install dependencies:
+In a separate terminal:
 
 ```bash
 npm install
-```
-
-Run the app:
-
-```bash
 npm run dev
 ```
 
-Open:
+Open `http://localhost:3000`. The API documentation is available at
+`http://localhost:8000/docs`.
 
-```text
-http://localhost:3000
-```
+### Enable local AI features
 
-To enable address search and the satellite map, copy `.env.local.example` to
-`.env.local` and replace its placeholder with a URL-restricted Mapbox public
-token. Keep `.env.local` outside Git.
-
-Current starter structure:
-
-```text
-src/app/page.tsx
-src/components/Toolbar.tsx
-src/components/YardCanvas.tsx
-src/components/YardCanvasClient.tsx
-src/components/YardEditor.tsx
-src/components/HeatmapLegend.tsx
-src/lib/types.ts
-```
-
-## Current Yard Editor Prototype
-
-The local yard editor is a retained prototype for future map-backed garden
-layout and sun-analysis research. It uses a V2 metre-based reference grid, a
-simple polygon yard boundary, and a visible north bearing.
-
-Choose house, tree, fence, or planting bed and click the reference grid to add
-it. Select an object to drag it, resize it with four corner controls, enter
-exact metre values, set obstacle height where it applies, or delete it. Object
-bounds stay inside the reference grid. Projects, including the north bearing,
-persist in the current browser through refreshes.
-
-Saved V1 drafts use percentage coordinates. On the first V2 visit, the editor
-asks for the real reference-grid width and depth before converting and saving
-the layout. This preserves the legacy layout without inventing a physical scale.
-
-The browser editor uses React-Konva with Konva 10 for client-side drawing.
-
-The address map uses Mapbox GL JS and Mapbox Search JS. Address results remain
-in the current map session. The active product roadmap defers map-based
-onboarding and yard-wide sun analysis until Garden Operations is stable.
-
-Run the component tests with:
+The local provider uses Ollama. Download the two models once:
 
 ```bash
-npm test
+ollama pull qwen3:4b
+ollama pull embeddinggemma
 ```
 
-## Local Backend Foundation
+Restart Docker Compose after downloading the models. Care-note extraction and
+Plant Knowledge remain available as ordinary forms when the AI provider cannot
+respond; users can continue recording information manually.
 
-The FastAPI and PostgreSQL workspace sync starts with an explicit import from
-the browser. Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` when the API runs
-somewhere other than `http://localhost:8000`. Its setup and REST endpoints are
-in [Backend Foundation](backend/README.md).
+## Verification
 
-## Continuous Integration
+Frontend:
 
-GitHub Actions validates frontend checks, backend tests, and the Docker Compose
-health endpoint on pull requests and pushes to `main`.
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+Backend:
+
+```bash
+cd backend
+pytest
+```
+
+GitHub Actions runs frontend checks, backend tests, and a Docker health check
+on pull requests and pushes to `main`.
+
+## Product Boundaries
+
+- The current workspace is a local, single-user application. Authentication,
+  authorization, and hosted storage remain a later release concern.
+- The portfolio demo deploys Garden, Care, and Season Planner workflows on
+  Vercel, Render, and Supabase. It uses generic data and keeps AI and photo
+  features in the local app.
+- Plant Knowledge uses a small curated source set with visible citations. It
+  provides educational guidance and requests more detail when evidence is weak.
+- Map-backed yard initialization and yard-wide sun analysis remain deferred
+  research work. The operational garden workflow is the active product.
+
+## Additional Documentation
+
+- [Product Brief](docs/product-brief.md)
+- [Technical Architecture](docs/technical-architecture.md)
+- [Project Strategy](docs/project-strategy.md)
+- [AI and RAG Design](docs/ai-rag-agent-design.md)
+- [Portfolio Demo Deployment](docs/portfolio-demo-deployment.md)
+- [Resume Positioning](docs/resume-positioning.md)
+- [Architecture Decision Records](docs/decisions/README.md)

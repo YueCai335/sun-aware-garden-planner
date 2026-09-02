@@ -1,137 +1,93 @@
 # Technical Architecture
 
-## High-Level Components
+## Implemented System
 
-Frontend:
-
-- Garden dashboard, growing-area management, and metric planting layouts.
-- React-Konva planting-layout canvas with grid snapping and accessible precise
-  controls.
-- Plant, activity, and care-task forms.
-- Garden journal and seasonal history views.
-- Crop-rotation planning and constraint explanations.
-- AI-assisted note review and grounded-answer interface.
-- Mapbox and place-search prototype retained for deferred map-backed layout
-  work.
-
-Backend:
-
-- Authentication and authorization.
-- Garden, growing-area, plant, event, task, and crop-history APIs.
-- Planning and crop-rotation service.
-- AI extraction, retrieval, evaluation, and feedback service.
-- Scheduled task generation and notification orchestration when measured need
-  supports background processing.
-
-Database:
-
-- Users and gardens.
-- Growing areas and seasonal plans.
-- Plants, crop families, and plantings.
-- Garden events, notes, photos, and attachments.
-- Care tasks and completion history.
-- Crop rotation history and planning results.
-- Retrieved source metadata, AI drafts, reviews, and evaluation data.
-
-## Target Stack
-
-Frontend:
+### Frontend
 
 - Next.js, React, and TypeScript.
-- Tailwind CSS and shadcn/ui.
-- Vitest, React Testing Library, and Playwright.
-- React-Konva for measured growing-area layouts, placement circles, grid
-  snapping, and direct manipulation.
-- Mapbox GL JS and Mapbox Search JS retained for the deferred map-backed
-  yard-layout module.
+- Garden Hub with multiple-garden thumbnails and global feature entry points.
+- React-Konva layouts for measured growing areas, plant footprints, grid
+  snapping, direct placement, and zoomed plan previews.
+- Forms for current plantings, care history, care tasks, plant health, future
+  season plans, and AI review.
+- Vitest and React Testing Library coverage for core user workflows.
 
-Backend:
+### Backend
 
-- FastAPI with Python.
-- Pydantic for API validation and pytest for backend tests.
-- REST and OpenAPI for the frontend-backend contract.
+- FastAPI and Pydantic for validated workspace and AI endpoints.
+- SQLAlchemy models and Alembic migrations for PostgreSQL persistence.
+- A complete-workspace import endpoint followed by server-backed workspace
+  updates.
+- Deterministic crop-rotation guidance by growing area and recent calendar
+  years.
 
-Data:
+### Data and AI
 
-- PostgreSQL with SQLAlchemy and Alembic.
-- pgvector for plant-knowledge retrieval.
-- PostGIS for garden locations, regional search, and deferred yard geometry.
+- PostgreSQL stores gardens, growing areas, layouts, current plantings,
+  season plans, care history, tasks, plant-health records, and source cards.
+- pgvector stores embeddings for Plant Knowledge retrieval.
+- Local Ollama models provide care-note extraction and answer generation.
+- Curated source cards retain publisher, URL, review date, and excerpt so the
+  interface can show citations with each answer.
 
-AI:
+### Delivery
 
-- OpenAI API for structured outputs, RAG answer generation, tool calling, and
-  planning assistance.
-- Evaluation datasets, citations, fallbacks, user review, and guardrails.
-
-Deployment:
-
-- Vercel for frontend previews and production hosting.
-- Docker and Docker Compose for a reproducible local environment.
-- GitHub Actions for tests, builds, security checks, and deployment gates.
-- AWS ECS Fargate, RDS, S3, CloudWatch, and Terraform when the backend is
-  deployed.
-
-## Module Boundaries
-
-`garden-operations` owns gardens, measured growing-area boundaries, plant
-allocations, plants, events, tasks, and history.
-
-`garden-planning` owns deterministic rotation rules, scheduling calculations,
-and plan constraints.
-
-`plant-knowledge` owns curated documents, retrieval metadata, and citations.
-
-`ai-assistant` owns structured extraction, grounded answers, user-review
-drafts, evaluations, and observability.
-
-`local-community` owns future listings, availability, reporting, moderation,
-and regional search.
-
-`sun-analysis` remains a deferred module. It will own confirmed yard geometry,
-authorized source metadata, deterministic solar calculations, and accuracy
-evidence when it resumes.
+- Docker Compose starts PostgreSQL with pgvector and the FastAPI API.
+- GitHub Actions checks frontend types and tests, backend tests, and API
+  health through Docker Compose.
 
 ## Data Flow
 
-1. A user creates a garden, named growing areas, and optional measured layouts.
-2. The user places plant allocations on a metre-based grid and records a
-   planting, care event, note, photo, or future task.
-3. The frontend validates local form state and sends a typed request to the
-   FastAPI API.
-4. The backend validates the request, applies authorization, and persists the
-   record in PostgreSQL.
-5. Planning services read the stored history to create deterministic rotation
-   warnings and task suggestions.
-6. The AI assistant may create a structured draft or grounded answer. The user
-   reviews the draft before it becomes a persisted garden record.
+1. A gardener creates or loads a local workspace.
+2. Garden Hub manages multiple gardens and opens their detailed layouts.
+3. Layout allocations link to current Planting Records, which provide the
+   factual planting history for care and rotation.
+4. An explicit import persists the workspace to PostgreSQL. Later frontend
+   edits update the same server workspace.
+5. The Next season planner reads growing-area history and saves tentative
+   choices to a separate Season Plan.
+6. AI services return structured drafts or source-grounded answers. The user
+   reviews results before saving garden records.
 
-## Staged Cloud Adoption
+## Module Boundaries
 
-- Phase 1 keeps the Garden Operations MVP browser-persisted and deploys the
-  web demo once the workflow is usable.
-- Phase 2 introduces FastAPI, PostgreSQL, Docker Compose, and GitHub Actions.
-- The first AWS deployment uses S3, RDS, ECS Fargate, and CloudWatch.
-- Terraform begins when those resources exist and can be validated.
-- Redis is introduced when scheduled processing or caching has measurable
-  value.
+`garden-operations` owns gardens, growing-area geometry, current plantings,
+care events, tasks, health records, and plan placement.
 
-## Deferred Map and Sun Module
+`garden-planning` owns rotation summaries, next-season plans, and companion
+planting notes.
 
-The existing map and yard-editor prototypes remain in the repository. Future
-work can add address-guided onboarding, parcel candidates, confirmed yard
-geometry, and sun analysis after the core garden operations workflow is stable.
+`plant-knowledge` owns curated source cards, embeddings, retrieval metadata,
+and displayed citations.
 
-The deferred module's earlier geometry, address-map, Mapbox, and parcel
-decisions are recorded in [ADR-0008](decisions/0008-use-metric-reference-grid-and-polygon-yard-boundary.md),
-[ADR-0009](decisions/0009-use-address-guided-map-initialization-and-point-sky-calibration.md),
-[ADR-0010](decisions/0010-use-mapbox-for-address-guided-map-initialization.md),
-and [ADR-0012](decisions/0012-use-address-first-parcel-candidates-with-user-confirmation.md).
+`ai-assistant` owns structured extraction and reviewable plant-health drafts.
 
-## Architecture Decisions
+## Current Boundaries
 
-Decisions that affect architecture, product correctness, cost, security, or
-long-term maintainability are recorded in
-[Architecture Decision Records](decisions/README.md). The current product
-priority is recorded in
-[ADR-0013](decisions/0013-prioritize-garden-operations-and-ai-planning.md)
-and [ADR-0014](decisions/0014-use-metric-planting-layouts-with-grid-snapping.md).
+- The app runs as a local, single-user workspace. Authentication and public
+  multi-user access are out of scope for the present implementation.
+- The source-card corpus is intentionally small and reviewed. Broad web
+  ingestion, treatment recommendations, and local regulatory guidance need a
+  separate content-governance design.
+- Map-backed onboarding and yard-wide sun analysis remain deferred research.
+  The product currently prioritizes reliable garden operations and seasonal
+  planning.
+
+## Deployment Direction
+
+The local Docker Compose setup is the reproducible development environment.
+The portfolio demo uses Vercel for the frontend, Render for FastAPI, and
+Supabase for PostgreSQL and pgvector. It presents generic garden data and
+keeps local AI and photo workflows outside the public environment. The
+deployment sequence is documented in
+[Portfolio Demo Deployment](portfolio-demo-deployment.md).
+
+A public multi-user release will add authentication, user authorization,
+durable object storage, backups, rate limits, AI-provider budgets, and
+operational monitoring.
+
+## Decision Records
+
+Product and architecture decisions are documented in
+[Architecture Decision Records](decisions/README.md). The active product
+direction is described in [Project Strategy](project-strategy.md).
