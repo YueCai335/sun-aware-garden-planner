@@ -48,6 +48,7 @@ describe("GardenWorkspace", () => {
     await user.click(screen.getByRole("button", { name: "AI garden note" }));
     expect(await screen.findByRole("heading", { name: "AI Garden Note runs in the local app" })).toBeInTheDocument();
     expect(screen.getByText("Completed care note")).toBeInTheDocument();
+    expect(screen.getByText(/hosted AI API can serve authenticated users/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back to dashboard" }));
     await user.click(screen.getByRole("button", { name: "Plant health" }));

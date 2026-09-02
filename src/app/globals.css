@@ -1254,6 +1254,13 @@ select {
   font-size: 14px;
 }
 
+.feature-preview-future {
+  margin: 0;
+  color: #657268;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .care-event-list {
   display: grid;
   gap: 10px;

@@ -49,6 +49,7 @@ export function PortfolioFeaturePreview({ feature }: { feature: Feature }) {
         <h3 id={`${feature}-sample-heading`}>{content.sampleTitle}</h3>
         {content.body}
       </section>
+      <p className="feature-preview-future">Future delivery path: a hosted AI API can serve authenticated users after usage limits and server-side credential management are in place.</p>
     </section>
   );
 }
